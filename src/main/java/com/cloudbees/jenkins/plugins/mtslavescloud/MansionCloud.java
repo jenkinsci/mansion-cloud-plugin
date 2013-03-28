@@ -3,6 +3,7 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 import com.cloudbees.jenkins.plugins.mtslavescloud.client.BrokerRef;
 import com.cloudbees.jenkins.plugins.mtslavescloud.client.VirtualMachineRef;
 import hudson.Extension;
+import hudson.Util;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Label;
@@ -30,8 +31,8 @@ public class MansionCloud extends AbstractCloudImpl {
     private final URL broker;
 
     @DataBoundConstructor
-    public MansionCloud(String name, URL broker) {
-        super(name, "0"/*unused*/);
+    public MansionCloud(URL broker) {
+        super("mansion"+ Util.getDigestOf(broker.toExternalForm()).substring(0,8), "0"/*unused*/);
         this.broker = broker;
     }
 
