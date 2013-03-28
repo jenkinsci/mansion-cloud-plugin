@@ -78,7 +78,7 @@ public class MansionCloud extends AbstractCloudImpl {
 
                         Jenkins.getInstance().addNode(s);
 
-                        // connect before we decllare victory
+                        // connect before we declare victory
                         // If we declare
                         // the provisioning complete by returning without the connect
                         // operation, NodeProvisioner may decide that it still wants

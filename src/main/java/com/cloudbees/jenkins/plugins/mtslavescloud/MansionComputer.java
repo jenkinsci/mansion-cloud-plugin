@@ -1,6 +1,10 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
+import hudson.model.Computer;
+import hudson.security.ACL;
+import hudson.security.Permission;
 import hudson.slaves.SlaveComputer;
+import org.acegisecurity.Authentication;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -16,6 +20,24 @@ public class MansionComputer extends SlaveComputer {
     MansionComputer(MansionSlave slave) {
         super(slave);
         this.slave = slave;
+    }
+
+    /**
+     * {@link MansionComputer} is not configurable.
+     *
+     * This also lets us hide a broken configuration page.
+     */
+    @Override
+    public ACL getACL() {
+        final ACL base = super.getACL();
+        return new ACL() {
+            @Override
+            public boolean hasPermission(Authentication a, Permission permission) {
+                if (permission== Computer.CONFIGURE)
+                    return false;
+                return base.hasPermission(a,permission);
+            }
+        };
     }
 
     @Override
