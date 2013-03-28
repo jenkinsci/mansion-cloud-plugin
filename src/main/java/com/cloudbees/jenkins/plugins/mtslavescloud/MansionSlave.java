@@ -2,10 +2,11 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import hudson.Util;
-import hudson.model.Computer;
 import hudson.model.Descriptor.FormException;
 import hudson.model.Node;
 import hudson.model.Slave;
+import hudson.model.TaskListener;
+import hudson.slaves.AbstractCloudSlave;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.EphemeralNode;
 import hudson.slaves.NodeProperty;
@@ -19,7 +20,7 @@ import java.util.logging.Logger;
  *
  * @author Kohsuke Kawaguchi
  */
-public class MansionSlave extends Slave implements EphemeralNode {
+public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
     private final VirtualMachineRef vm;
 
     public MansionSlave(VirtualMachineRef vm, ComputerLauncher launcher ) throws FormException, IOException {
@@ -45,7 +46,7 @@ public class MansionSlave extends Slave implements EphemeralNode {
     }
 
     @Override
-    public Computer createComputer() {
+    public MansionComputer createComputer() {
         return new MansionComputer(this);
     }
 
@@ -53,9 +54,10 @@ public class MansionSlave extends Slave implements EphemeralNode {
         return this;
     }
 
-    public void terminate() throws IOException, InterruptedException {
+    @Override
+    protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         vm.dispose();
-        LOGGER.info("Disposed "+vm.url);
+        listener.getLogger().println("Disposed " + vm.url);
     }
 
     private static final Logger LOGGER = Logger.getLogger(MansionSlave.class.getName());

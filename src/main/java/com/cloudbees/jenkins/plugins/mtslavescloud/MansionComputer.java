@@ -3,7 +3,7 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 import hudson.model.Computer;
 import hudson.security.ACL;
 import hudson.security.Permission;
-import hudson.slaves.SlaveComputer;
+import hudson.slaves.AbstractCloudComputer;
 import org.acegisecurity.Authentication;
 
 import java.io.IOException;
@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 /**
  * @author Kohsuke Kawaguchi
  */
-public class MansionComputer extends SlaveComputer {
+public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
     // MansionSlave, once gets created, is never reconfigured, so we can keep a reference like this.
     private final MansionSlave slave;
 
@@ -38,11 +38,6 @@ public class MansionComputer extends SlaveComputer {
                 return base.hasPermission(a,permission);
             }
         };
-    }
-
-    @Override
-    public MansionSlave getNode() {
-        return (MansionSlave)super.getNode();
     }
 
     // TODO: post 1.510, move this logic to onRemoved()
