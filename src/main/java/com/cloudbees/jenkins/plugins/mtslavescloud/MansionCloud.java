@@ -3,15 +3,19 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 import com.cloudbees.mtslaves.client.BrokerRef;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
+import com.cloudbees.mtslaves.client.properties.SshdEndpointProperty;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
+import hudson.model.Slave;
+import hudson.plugins.sshslaves.SSHLauncher;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.Cloud;
 import hudson.slaves.NodeProvisioner.PlannedNode;
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
@@ -67,8 +71,26 @@ public class MansionCloud extends AbstractCloudImpl {
                     public Node call() throws Exception {
                         vm.bootSync();
                         LOGGER.fine("Booted " + vm.url);
-                        throw new UnsupportedOperationException();
-//                        return null;
+                        SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
+                        SSHLauncher launcher = new SSHLauncher(
+                                sshd.getHost(), sshd.getPort(), null, null, null, null);
+                        Slave s = new MansionSlave(vm, launcher);
+
+                        Jenkins.getInstance().addNode(s);
+
+                        // connect before we decllare victory
+                        // If we declare
+                        // the provisioning complete by returning without the connect
+                        // operation, NodeProvisioner may decide that it still wants
+                        // one more instance, because it sees that (1) all the slaves
+                        // are offline (because it's still being launched) and
+                        // (2) there's no capacity provisioned yet.
+                        //
+                        // deferring the completion of provisioning until the launch
+                        // goes successful prevents this problem.
+                        s.toComputer().connect(false).get();
+
+                        return s;
                     }
                 });
                 r.add(new PlannedNode(vm.getId(),f,1));
