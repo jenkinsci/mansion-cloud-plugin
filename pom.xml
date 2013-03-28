@@ -37,5 +37,8 @@
 
   <properties>
     <port>8081</port>
+
+    <!-- NodeProvisioner runs x10 the normal speed (which is 10000) to reduce the delay till the provisioning attempt -->
+    <hudson.model.LoadStatistics.clock>1000</hudson.model.LoadStatistics.clock>
   </properties>
 </project>
