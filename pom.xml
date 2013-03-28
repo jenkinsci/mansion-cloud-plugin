@@ -34,4 +34,8 @@
       <scope>provided</scope>
     </dependency>
   </dependencies>
+
+  <properties>
+    <port>8081</port>
+  </properties>
 </project>
