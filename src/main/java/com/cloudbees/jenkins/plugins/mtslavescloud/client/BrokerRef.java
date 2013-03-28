@@ -14,8 +14,8 @@ public class BrokerRef extends RemoteReference {
         super(url);
     }
 
-    public VirtualMachineRef createVirtualMachine(JSONObject json) throws IOException {
-        HttpURLConnection con = postJson(open("createVirtualMachine"), json);
+    public VirtualMachineRef createVirtualMachine(VirtualMachineSpec spec) throws IOException {
+        HttpURLConnection con = postJson(open("createVirtualMachine"), JSONObject.fromObject(spec));
         verifyResponseStatus(con);
         return new VirtualMachineRef(new URL(con.getHeaderField("Location")));
     }

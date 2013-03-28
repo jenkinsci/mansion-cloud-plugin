@@ -2,6 +2,7 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.jenkins.plugins.mtslavescloud.client.BrokerRef;
 import com.cloudbees.jenkins.plugins.mtslavescloud.client.VirtualMachineRef;
+import com.cloudbees.jenkins.plugins.mtslavescloud.client.VirtualMachineSpec;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.Computer;
@@ -56,7 +57,7 @@ public class MansionCloud extends AbstractCloudImpl {
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
             for (int i=0; i<excessWorkload; i++) {
-                final VirtualMachineRef vm = new BrokerRef(broker).createVirtualMachine(JSONObject.fromObject("{\"configs\":[]}"));
+                final VirtualMachineRef vm = new BrokerRef(broker).createVirtualMachine(new VirtualMachineSpec());
                 LOGGER.fine("Allocated "+vm.url);
 
                 Future<Node> f = Computer.threadPoolForRemoting.submit(new Callable<Node>() {
