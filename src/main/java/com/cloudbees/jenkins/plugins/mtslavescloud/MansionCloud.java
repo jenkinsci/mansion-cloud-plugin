@@ -51,15 +51,20 @@ public class MansionCloud extends AbstractCloudImpl {
 
     @Override
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
+        LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
+
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
             for (int i=0; i<excessWorkload; i++) {
                 final VirtualMachineRef vm = new BrokerRef(broker).createVirtualMachine(JSONObject.fromObject("{\"configs\":[]}"));
+                LOGGER.fine("Allocated "+vm.url);
 
                 Future<Node> f = Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                     public Node call() throws Exception {
                         vm.boot();
-                        return null;
+                        LOGGER.fine("Booted " + vm.url);
+                        throw new UnsupportedOperationException();
+//                        return null;
                     }
                 });
                 r.add(new PlannedNode(vm.getId(),f,1));
