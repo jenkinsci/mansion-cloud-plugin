@@ -1,6 +1,8 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
+import hudson.Util;
+import hudson.model.Computer;
 import hudson.model.Descriptor.FormException;
 import hudson.model.Node;
 import hudson.model.Slave;
@@ -18,8 +20,12 @@ import java.util.Collections;
  * @author Kohsuke Kawaguchi
  */
 public class MansionSlave extends Slave implements EphemeralNode {
+    private final VirtualMachineRef vm;
+
     public MansionSlave(VirtualMachineRef vm, ComputerLauncher launcher ) throws FormException, IOException {
-        super(vm.getId(), "Virtual machine provisioned from "+vm.url,
+        super(
+                Util.getDigestOf(vm.getId()).substring(0,8),
+                "Virtual machine provisioned from "+vm.url,
                 "/tmp/"+vm.getId(), // TODO:
                 1,
                 Mode.NORMAL,
@@ -27,9 +33,19 @@ public class MansionSlave extends Slave implements EphemeralNode {
                 launcher,
                 RetentionStrategy.INSTANCE,
                 Collections.<NodeProperty<?>>emptyList());
+        this.vm = vm;
+    }
+
+    @Override
+    public Computer createComputer() {
+        return new MansionComputer(this);
     }
 
     public Node asNode() {
         return this;
+    }
+
+    public void terminate() {
+        vm.dispose();
     }
 }
