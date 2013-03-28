@@ -12,7 +12,6 @@ import hudson.model.Node;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.Cloud;
 import hudson.slaves.NodeProvisioner.PlannedNode;
-import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
@@ -57,7 +56,11 @@ public class MansionCloud extends AbstractCloudImpl {
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
             for (int i=0; i<excessWorkload; i++) {
-                final VirtualMachineRef vm = new BrokerRef(broker).createVirtualMachine(new VirtualMachineSpec());
+                VirtualMachineSpec spec = new VirtualMachineSpec();
+                for (MansionVmConfigurator configurator : MansionVmConfigurator.all()) {
+                    configurator.configure(this,label,spec);
+                }
+                final VirtualMachineRef vm = new BrokerRef(broker).createVirtualMachine(spec);
                 LOGGER.fine("Allocated "+vm.url);
 
                 Future<Node> f = Computer.threadPoolForRemoting.submit(new Callable<Node>() {
@@ -72,6 +75,8 @@ public class MansionCloud extends AbstractCloudImpl {
             }
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Failed to provision from "+this,e);
+        } catch (InterruptedException e) {
+            LOGGER.log(Level.WARNING, "Failed to provision from " + this, e);
         }
         return r;
     }
