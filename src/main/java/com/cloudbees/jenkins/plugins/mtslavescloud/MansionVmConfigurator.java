@@ -1,6 +1,6 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
-import com.cloudbees.jenkins.plugins.mtslavescloud.client.VirtualMachineSpec;
+import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import hudson.model.Label;

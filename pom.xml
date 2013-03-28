@@ -33,6 +33,11 @@
       <version>1.208-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.cloudbees.mtslaves</groupId>
+      <artifactId>mansion-client</artifactId>
+      <version>1.0-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 
   <build>

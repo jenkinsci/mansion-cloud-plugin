@@ -1,8 +1,8 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
-import com.cloudbees.jenkins.plugins.mtslavescloud.client.BrokerRef;
-import com.cloudbees.jenkins.plugins.mtslavescloud.client.VirtualMachineRef;
-import com.cloudbees.jenkins.plugins.mtslavescloud.client.VirtualMachineSpec;
+import com.cloudbees.mtslaves.client.BrokerRef;
+import com.cloudbees.mtslaves.client.VirtualMachineRef;
+import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.Computer;
@@ -65,7 +65,7 @@ public class MansionCloud extends AbstractCloudImpl {
 
                 Future<Node> f = Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                     public Node call() throws Exception {
-                        vm.boot();
+                        vm.bootSync();
                         LOGGER.fine("Booted " + vm.url);
                         throw new UnsupportedOperationException();
 //                        return null;
