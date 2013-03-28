@@ -35,6 +35,19 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.gmaven</groupId>
+        <artifactId>gmaven-plugin</artifactId>
+        <version>1.4</version>
+        <configuration>
+          <providerSelection>1.8</providerSelection>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
   <properties>
     <port>8081</port>
 
