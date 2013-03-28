@@ -9,10 +9,10 @@ import hudson.model.Slave;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.EphemeralNode;
 import hudson.slaves.NodeProperty;
-import hudson.slaves.RetentionStrategy;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.logging.Logger;
 
 /**
  * {@link Slave} for {@link MansionCloud}
@@ -31,7 +31,7 @@ public class MansionSlave extends Slave implements EphemeralNode {
                 Mode.NORMAL,
                 "", // TODO
                 launcher,
-                RetentionStrategy.INSTANCE,
+                new CloudSlaveRetentionstrategy(),
                 Collections.<NodeProperty<?>>emptyList());
         this.vm = vm;
     }
@@ -45,7 +45,10 @@ public class MansionSlave extends Slave implements EphemeralNode {
         return this;
     }
 
-    public void terminate() {
+    public void terminate() throws IOException, InterruptedException {
         vm.dispose();
+        LOGGER.info("Disposed "+vm.url);
     }
+
+    private static final Logger LOGGER = Logger.getLogger(MansionSlave.class.getName());
 }
