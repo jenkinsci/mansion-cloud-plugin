@@ -74,21 +74,24 @@ public class MansionCloud extends AbstractCloudImpl {
                         SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
                         SSHLauncher launcher = new SSHLauncher(
                                 sshd.getHost(), sshd.getPort(), null, null, null, null);
-                        Slave s = new MansionSlave(vm, launcher);
+                        MansionSlave s = new MansionSlave(vm, launcher);
 
-                        Jenkins.getInstance().addNode(s);
-
-                        // connect before we declare victory
-                        // If we declare
-                        // the provisioning complete by returning without the connect
-                        // operation, NodeProvisioner may decide that it still wants
-                        // one more instance, because it sees that (1) all the slaves
-                        // are offline (because it's still being launched) and
-                        // (2) there's no capacity provisioned yet.
-                        //
-                        // deferring the completion of provisioning until the launch
-                        // goes successful prevents this problem.
-                        s.toComputer().connect(false).get();
+                        try {
+                            // connect before we declare victory
+                            // If we declare
+                            // the provisioning complete by returning without the connect
+                            // operation, NodeProvisioner may decide that it still wants
+                            // one more instance, because it sees that (1) all the slaves
+                            // are offline (because it's still being launched) and
+                            // (2) there's no capacity provisioned yet.
+                            //
+                            // deferring the completion of provisioning until the launch
+                            // goes successful prevents this problem.
+                            Jenkins.getInstance().addNode(s);
+                            s.toComputer().connect(false).get();
+                        } finally {
+                            s.cancelHoldOff();
+                        }
 
                         return s;
                     }

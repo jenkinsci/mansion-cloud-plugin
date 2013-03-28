@@ -34,6 +34,14 @@ public class MansionSlave extends Slave implements EphemeralNode {
                 new CloudSlaveRetentionstrategy(),
                 Collections.<NodeProperty<?>>emptyList());
         this.vm = vm;
+
+        // suspend retention strategy until we do the initial launch
+        this.holdOffLaunchUntilSave = true;
+    }
+
+    protected void cancelHoldOff() {
+        // resume the retention strategy work that we've suspended in the constructor
+        holdOffLaunchUntilSave = false;
     }
 
     @Override
