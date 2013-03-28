@@ -4,6 +4,7 @@ import com.cloudbees.mtslaves.client.BrokerRef;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.SshdEndpointProperty;
+import hudson.CopyOnWrite;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.Computer;
@@ -11,10 +12,14 @@ import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.Slave;
+import hudson.model.UserProperty;
 import hudson.plugins.sshslaves.SSHLauncher;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.Cloud;
+import hudson.slaves.NodeProperty;
+import hudson.slaves.NodePropertyDescriptor;
 import hudson.slaves.NodeProvisioner.PlannedNode;
+import hudson.util.DescribableList;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -34,10 +39,23 @@ import java.util.logging.Logger;
 public class MansionCloud extends AbstractCloudImpl {
     private final URL broker;
 
+    /**
+     * List of {@link MansionCloudProperty}s configured for this project.
+     */
+    @CopyOnWrite
+    private volatile DescribableList<MansionCloudProperty,MansionCloudPropertyDescriptor> properties
+            = new DescribableList<MansionCloudProperty,MansionCloudPropertyDescriptor>(Jenkins.getInstance());
+
     @DataBoundConstructor
-    public MansionCloud(URL broker) {
+    public MansionCloud(URL broker, List<MansionCloudProperty> properties) throws IOException {
         super("mansion"+ Util.getDigestOf(broker.toExternalForm()).substring(0,8), "0"/*unused*/);
         this.broker = broker;
+        if (properties!=null)
+            this.properties.replaceBy(properties);
+    }
+
+    public DescribableList<MansionCloudProperty, MansionCloudPropertyDescriptor> getProperties() {
+        return properties;
     }
 
     /**
