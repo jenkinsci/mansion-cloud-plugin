@@ -1,9 +1,20 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.mtslaves.client.BrokerRef;
+import com.cloudbees.mtslaves.client.HardwareSpec;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.SshdEndpointProperty;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.trilead.ssh2.crypto.PEMDecoder;
+import com.trilead.ssh2.signature.DSAPrivateKey;
+import com.trilead.ssh2.signature.DSAPublicKey;
+import com.trilead.ssh2.signature.DSASHA1Verify;
+import com.trilead.ssh2.signature.RSAPrivateKey;
+import com.trilead.ssh2.signature.RSAPublicKey;
+import com.trilead.ssh2.signature.RSASHA1Verify;
 import hudson.CopyOnWrite;
 import hudson.Extension;
 import hudson.Util;
@@ -25,10 +36,16 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.RSAPublicKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -82,16 +99,29 @@ public class MansionCloud extends AbstractCloudImpl {
                 for (MansionVmConfigurator configurator : MansionVmConfigurator.all()) {
                     configurator.configure(this,label,spec);
                 }
-                final VirtualMachineRef vm = new BrokerRef(broker).createVirtualMachine(spec);
+                spec.network("jenkins");
+                spec.fs(new URL("http://localhost:8080/zfs/f17@original"), "/");
+
+                //TODO: allow user to select this when configuring template
+                SSHUserPrivateKey privateKey = CredentialsProvider.lookupCredentials(SSHUserPrivateKey.class).get(0);
+                String sshPublicKey = getPublicKey(privateKey);
+
+
+                spec.sshd("jenkins",sshPublicKey);
+		//TODO : allow user to configure oauth token from credentials plugin
+                final VirtualMachineRef vm =
+                        new BrokerRef(broker).createVirtualMachine(HardwareSpec.SMALL, "88e7313d64af5ee654525625885be2781eb9bae0");
                 LOGGER.fine("Allocated "+vm.url);
+                vm.setup(spec);
 
                 Future<Node> f = Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                     public Node call() throws Exception {
                         vm.bootSync();
                         LOGGER.fine("Booted " + vm.url);
                         SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
+			// TODO: don't hardcode the path to the key...
                         SSHLauncher launcher = new SSHLauncher(
-                                sshd.getHost(), sshd.getPort(), null, null, null, null);
+                                sshd.getHost(), sshd.getPort(), "jenkins", null, "/Users/recampbell/.ssh/id_rsa", null);
                         MansionSlave s = new MansionSlave(vm, launcher);
 
                         try {
@@ -131,6 +161,19 @@ public class MansionCloud extends AbstractCloudImpl {
             LOGGER.log(Level.WARNING, "Failed to provision from " + this, e);
         }
         return r;
+    }
+
+    private String getPublicKey(SSHUserPrivateKey user) throws IOException {
+        Object decode = PEMDecoder.decode(user.getPrivateKey().toCharArray(), user.getPassphrase().getEncryptedValue());
+        String sshPublicKey = null;
+        if (decode instanceof DSAPrivateKey) {
+            DSAPublicKey publicKey = ((DSAPrivateKey) decode).getPublicKey();
+            sshPublicKey = "ssh-dsa " + new String(hudson.remoting.Base64.encode(DSASHA1Verify.encodeSSHDSAPublicKey(publicKey)));
+
+        } else {
+            RSAPublicKey publicKey = ((RSAPrivateKey) decode).getPublicKey();
+            sshPublicKey = "ssh-rsa " + new String(hudson.remoting.Base64.encode(RSASHA1Verify.encodeSSHRSAPublicKey(publicKey)));
+        } return sshPublicKey;
     }
 
     @Extension
