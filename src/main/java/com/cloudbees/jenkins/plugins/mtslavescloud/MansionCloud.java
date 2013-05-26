@@ -106,7 +106,16 @@ public class MansionCloud extends AbstractCloudImpl {
                             // deferring the completion of provisioning until the launch
                             // goes successful prevents this problem.
                             Jenkins.getInstance().addNode(s);
-                            s.toComputer().connect(false).get();
+                            for (int tries = 0; tries < 10; tries ++) {
+                                Thread.sleep(500);
+                                try {
+                                    s.toComputer().connect(false).get();
+                                    break;
+                                } catch (ExecutionException e) {
+                                    if (! (e.getCause() instanceof IOException))
+                                        throw e;
+                                }
+                            }
                         } finally {
                             s.cancelHoldOff();
                         }
