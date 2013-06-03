@@ -55,6 +55,12 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
     }
 
     @Override
+    public String getLabelString() {
+        //temporary hack
+        return "mansion";
+    }
+
+    @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         vm.dispose();
         listener.getLogger().println("Disposed " + vm.url);

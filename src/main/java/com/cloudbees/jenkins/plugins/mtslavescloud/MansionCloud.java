@@ -32,8 +32,11 @@ import hudson.slaves.NodePropertyDescriptor;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.DescribableList;
 import jenkins.model.Jenkins;
+import org.apache.commons.io.IOUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -100,14 +103,12 @@ public class MansionCloud extends AbstractCloudImpl {
                     configurator.configure(this,label,spec);
                 }
                 spec.network("jenkins");
-                spec.fs(new URL("http://localhost:8080/zfs/f17@original"), "/");
-
-                //TODO: allow user to select this when configuring template
-                SSHUserPrivateKey privateKey = CredentialsProvider.lookupCredentials(SSHUserPrivateKey.class).get(0);
-                String sshPublicKey = getPublicKey(privateKey);
+                spec.fs(new URL("http://localhost:8080/zfs/f17-base@f17-base"), "/");
 
 
-                spec.sshd("jenkins",sshPublicKey);
+                String publicKey = IOUtils.toString(new FileReader(new File(System.getProperty("user.home") + "/.ssh/id_dsa.pub")));
+
+                spec.sshd("jenkins", publicKey.trim());
 		//TODO : allow user to configure oauth token from credentials plugin
                 final VirtualMachineRef vm =
                         new BrokerRef(broker).createVirtualMachine(HardwareSpec.SMALL, "88e7313d64af5ee654525625885be2781eb9bae0");
@@ -121,7 +122,7 @@ public class MansionCloud extends AbstractCloudImpl {
                         SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
 			// TODO: don't hardcode the path to the key...
                         SSHLauncher launcher = new SSHLauncher(
-                                sshd.getHost(), sshd.getPort(), "jenkins", null, "/Users/recampbell/.ssh/id_rsa", null);
+                                sshd.getHost(), sshd.getPort(), "jenkins", null, System.getProperty("user.home")+"/.ssh/id_dsa", null);
                         MansionSlave s = new MansionSlave(vm, launcher);
 
                         try {
