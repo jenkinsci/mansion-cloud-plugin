@@ -1,6 +1,9 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
+import com.cloudbees.mtslaves.client.FileSystemRef;
+import com.cloudbees.mtslaves.client.SnapshotRef;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
+import com.cloudbees.mtslaves.client.properties.FileSystemsProperty;
 import hudson.Util;
 import hudson.model.Descriptor.FormException;
 import hudson.model.Node;
@@ -27,7 +30,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
         super(
                 Util.getDigestOf(vm.getId()).substring(0,8),
                 "Virtual machine provisioned from "+vm.url,
-                "/tmp/"+vm.getId(), // TODO:
+                "/scratch/jenkins", // TODO:
                 1,
                 Mode.NORMAL,
                 "", // TODO
@@ -62,6 +65,12 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
+        FileSystemRef rootFs = new FileSystemRef(
+                vm.getState().getProperty(FileSystemsProperty.class).getFileSystemUrlFor("/"),
+                "88e7313d64af5ee654525625885be2781eb9bae0");
+
+        SnapshotRef snapshot = rootFs.snapshot();
+        MansionCloud.get().lastSnapshot = snapshot;
         vm.dispose();
         listener.getLogger().println("Disposed " + vm.url);
     }

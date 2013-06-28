@@ -4,6 +4,8 @@ import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.mtslaves.client.BrokerRef;
 import com.cloudbees.mtslaves.client.HardwareSpec;
+import com.cloudbees.mtslaves.client.SnapshotRef;
+import com.cloudbees.mtslaves.client.VirtualMachineConfigurationException;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.SshdEndpointProperty;
@@ -59,6 +61,8 @@ import java.util.logging.Logger;
 public class MansionCloud extends AbstractCloudImpl {
     private final URL broker;
 
+    public SnapshotRef lastSnapshot = null;
+
     /**
      * List of {@link MansionCloudProperty}s configured for this project.
      */
@@ -103,7 +107,11 @@ public class MansionCloud extends AbstractCloudImpl {
                     configurator.configure(this,label,spec);
                 }
                 spec.network("jenkins");
-                spec.fs(new URL("http://localhost:8080/zfs/f17-base@f17-base"), "/");
+                if (lastSnapshot == null) {
+                    spec.fs(new URL("http://localhost:8080/zfs/f17-base"), "/");
+                } else {
+                    spec.fs(lastSnapshot.url,"/");
+                }
 
 
                 String publicKey = IOUtils.toString(new FileReader(new File(System.getProperty("user.home") + "/.ssh/id_dsa.pub")));
@@ -113,7 +121,11 @@ public class MansionCloud extends AbstractCloudImpl {
                 final VirtualMachineRef vm =
                         new BrokerRef(broker).createVirtualMachine(HardwareSpec.SMALL, "88e7313d64af5ee654525625885be2781eb9bae0");
                 LOGGER.fine("Allocated "+vm.url);
-                vm.setup(spec);
+                try {
+                    vm.setup(spec);
+                } catch (VirtualMachineConfigurationException e) {
+                    //TODO: retry with another snapshot
+                }
 
                 Future<Node> f = Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                     public Node call() throws Exception {
@@ -175,6 +187,10 @@ public class MansionCloud extends AbstractCloudImpl {
             RSAPublicKey publicKey = ((RSAPrivateKey) decode).getPublicKey();
             sshPublicKey = "ssh-rsa " + new String(hudson.remoting.Base64.encode(RSASHA1Verify.encodeSSHRSAPublicKey(publicKey)));
         } return sshPublicKey;
+    }
+
+    public static MansionCloud get() {
+        return Jenkins.getInstance().clouds.get(MansionCloud.class);
     }
 
     @Extension

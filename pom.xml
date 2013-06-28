@@ -68,7 +68,7 @@
             <systemProperty>
               <!-- NodeProvisioner runs x100 the normal speed (which is 10000) to reduce the delay till the provisioning attempt -->
               <name>hudson.model.LoadStatistics.clock</name>
-              <value>100</value>
+              <value>1000</value>
             </systemProperty>
             <systemProperty>
               <!--Deallocate quickly -->
