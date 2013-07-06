@@ -106,7 +106,9 @@ public class MansionCloud extends AbstractCloudImpl {
                     spec.fs(lastSnapshot.url,"/");
                 }
 
-
+                // we need an SSH key pair to securely login to the allocated slave, but it does't matter what key to use.
+                // so just reuse the Jenkins instance identity for a convenience, since this key is readily available,
+                // and its private key is hidden to the master.
                 InstanceIdentity id = InstanceIdentity.get();
                 String publicKey = "ssh_rsa "+new String(Base64.encodeBase64(id.getPublic().getEncoded()))+" "+Jenkins.getInstance().getRootUrl();
 
