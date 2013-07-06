@@ -137,7 +137,6 @@ public class MansionCloud extends AbstractCloudImpl {
                         vm.bootSync();
                         LOGGER.fine("Booted " + vm.url);
                         SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
-			// TODO: don't hardcode the path to the key...
                         SSHLauncher launcher = new SSHLauncher(
                                 sshd.getHost(), sshd.getPort(), sshCred, null, null, null, null);
                         MansionSlave s = new MansionSlave(vm, launcher);
