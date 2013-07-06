@@ -32,6 +32,7 @@ import hudson.slaves.Cloud;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.DescribableList;
 import jenkins.model.Jenkins;
+import net.sf.json.JSONObject;
 import org.apache.commons.codec.binary.Base64;
 import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -42,6 +43,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -88,9 +90,32 @@ public class MansionCloud extends AbstractCloudImpl {
         return true;
     }
 
+    /**
+     * Maps a label to a template.
+     *
+     * This is a scaffolding for time being as the mapping to label to {@link SlaveTemplate}
+     * should be configured in each instance (with a reasonable defaulting to hide that complexity
+     * for those who don't care.)
+     */
+    private SlaveTemplate resolveToTemplate(Label label) {
+        try {
+            Map<String,SlaveTemplate> m = SlaveTemplate.load(this.getClass().getResourceAsStream("machines.json"));
+            SlaveTemplate s = m.get(label.toString());
+            if (s!=null)    return s;
+
+            // until we tidy up the template part, fall back to LXC as the default so as not to block Ryan
+            return m.get("lxc-fedora17");
+        } catch (IOException e) {
+            throw new Error(e);
+        }
+    }
+
+
     @Override
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
         LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
+
+        SlaveTemplate st = resolveToTemplate(label);
 
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
@@ -99,10 +124,17 @@ public class MansionCloud extends AbstractCloudImpl {
                 for (MansionVmConfigurator configurator : MansionVmConfigurator.all()) {
                     configurator.configure(this,label,spec);
                 }
-                spec.network("jenkins");
-                if (lastSnapshot == null) {
-                    spec.fs(new URL("http://localhost:8080/zfs/f17-base"), "/");
-                } else {
+                st.populate(spec);
+
+                if (lastSnapshot != null) {
+                    // SCAFFOLD: just for now. remove fileSystem definition from the current spec
+                    for (JSONObject c : Util.filter(spec.configs,JSONObject.class)) {
+                        if (c.getString("type").equals("fileSystem")) {
+                            spec.configs.remove(c);
+                            break;
+                        }
+                    }
+                    // TODO: not sure where is the right place to store snapshots, but it's not in MansionCloud that's for sure
                     spec.fs(lastSnapshot.url,"/");
                 }
 

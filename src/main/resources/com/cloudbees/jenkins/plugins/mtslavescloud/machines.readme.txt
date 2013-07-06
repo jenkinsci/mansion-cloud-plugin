@@ -1,0 +1,6 @@
+This JSON file defines available machine types. For the time being, this is hard coded to a plugin,
+but the idea is to open this up and make this externally configurable, either via update center or
+by chef pushing this file into $JENKINS_HOME.
+
+Ultimately we want the community to be able to write these.
+

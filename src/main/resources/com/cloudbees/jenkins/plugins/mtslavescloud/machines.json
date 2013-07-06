@@ -1,0 +1,27 @@
+{ "templates" : [
+    {
+        "id" : "lxc-fedora17",
+        "displayName" : "Fedora 17 LXC slave",
+        "spec" : {
+            "configs" : [
+                {
+                    "type" : "fileSystem",
+                    "fileSystem" : "http://localhost:8080/zfs/f17-base",
+                    "path" : "/"
+                },
+                {
+                    "type" : "lxcNetwork",
+                    "hostName" : "jenkins"
+                }
+            ]
+        }
+    },
+    {
+        "id" : "osx",
+        "displayName" : "Mac OS X",
+        "spec" : {
+            "configs" : [
+            ]
+        }
+    }
+]}
