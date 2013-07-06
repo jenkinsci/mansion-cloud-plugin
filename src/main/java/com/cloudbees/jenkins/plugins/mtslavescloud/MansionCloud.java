@@ -2,6 +2,8 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
+import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
+import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey.DirectEntryPrivateKeySource;
 import com.cloudbees.mtslaves.client.BrokerRef;
 import com.cloudbees.mtslaves.client.HardwareSpec;
 import com.cloudbees.mtslaves.client.SnapshotRef;
@@ -9,7 +11,6 @@ import com.cloudbees.mtslaves.client.VirtualMachineConfigurationException;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.SshdEndpointProperty;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.trilead.ssh2.crypto.PEMDecoder;
 import com.trilead.ssh2.signature.DSAPrivateKey;
 import com.trilead.ssh2.signature.DSAPublicKey;
@@ -24,28 +25,19 @@ import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
-import hudson.model.Slave;
-import hudson.model.UserProperty;
 import hudson.plugins.sshslaves.SSHLauncher;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.Cloud;
-import hudson.slaves.NodeProperty;
-import hudson.slaves.NodePropertyDescriptor;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.DescribableList;
 import jenkins.model.Jenkins;
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.codec.binary.Base64;
+import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
-import java.nio.charset.Charset;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.spec.RSAPublicKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -114,9 +106,13 @@ public class MansionCloud extends AbstractCloudImpl {
                 }
 
 
-                String publicKey = IOUtils.toString(new FileReader(new File(System.getProperty("user.home") + "/.ssh/id_dsa.pub")));
+                InstanceIdentity id = InstanceIdentity.get();
+                String publicKey = "ssh_rsa "+new String(Base64.encodeBase64(id.getPublic().getEncoded()))+" "+Jenkins.getInstance().getRootUrl();
 
-                spec.sshd("jenkins", publicKey.trim());
+                final SSHUser sshCred = new BasicSSHUserPrivateKey(null,null, JENKINS_USER,
+                        new DirectEntryPrivateKeySource(encodePrivateKey(id)),null,null);
+
+                spec.sshd(JENKINS_USER, publicKey.trim());
 		//TODO : allow user to configure oauth token from credentials plugin
                 final VirtualMachineRef vm =
                         new BrokerRef(broker).createVirtualMachine(HardwareSpec.SMALL, "88e7313d64af5ee654525625885be2781eb9bae0");
@@ -125,6 +121,7 @@ public class MansionCloud extends AbstractCloudImpl {
                     vm.setup(spec);
                 } catch (VirtualMachineConfigurationException e) {
                     //TODO: retry with another snapshot
+                    LOGGER.log(Level.WARNING, "Failed to configure VM",e);
                 }
 
                 Future<Node> f = Computer.threadPoolForRemoting.submit(new Callable<Node>() {
@@ -134,7 +131,7 @@ public class MansionCloud extends AbstractCloudImpl {
                         SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
 			// TODO: don't hardcode the path to the key...
                         SSHLauncher launcher = new SSHLauncher(
-                                sshd.getHost(), sshd.getPort(), "jenkins", null, System.getProperty("user.home")+"/.ssh/id_dsa", null);
+                                sshd.getHost(), sshd.getPort(), sshCred, null, null, null, null);
                         MansionSlave s = new MansionSlave(vm, launcher);
 
                         try {
@@ -176,6 +173,19 @@ public class MansionCloud extends AbstractCloudImpl {
         return r;
     }
 
+    // TODO: move this to instance-identity-module
+    private String encodePrivateKey(InstanceIdentity id) {
+        try {
+            StringBuilder buf = new StringBuilder();
+            buf.append("-----BEGIN RSA PRIVATE KEY-----\n");
+            buf.append(new String(Base64.encodeBase64(id.getPrivate().getEncoded()),"US-ASCII"));
+            buf.append("-----END RSA PRIVATE KEY-----\n");
+            return buf.toString();
+        } catch (UnsupportedEncodingException e) {
+            throw new AssertionError(e); // US-ASCII is mandatory
+        }
+    }
+
     private String getPublicKey(SSHUserPrivateKey user) throws IOException {
         Object decode = PEMDecoder.decode(user.getPrivateKey().toCharArray(), user.getPassphrase().getEncryptedValue());
         String sshPublicKey = null;
@@ -202,4 +212,9 @@ public class MansionCloud extends AbstractCloudImpl {
     }
 
     private static final Logger LOGGER = Logger.getLogger(MansionCloud.class.getName());
+
+    /**
+     * User name to create inside the virtual machine and login as.
+     */
+    public static final String JENKINS_USER = "jenkins";
 }

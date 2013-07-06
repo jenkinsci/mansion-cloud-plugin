@@ -36,7 +36,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>ssh-slaves</artifactId>
-      <version>0.20</version>
+      <version>0.27</version>
     </dependency>
     <dependency>
       <groupId>com.cloudbees.mtslaves</groupId>
@@ -48,6 +48,12 @@
       <artifactId>ssh-credentials</artifactId>
       <version>0.3</version>
      </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.modules</groupId>
+      <artifactId>instance-identity</artifactId>
+      <version>1.2</version>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>
