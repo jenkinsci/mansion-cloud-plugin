@@ -6,6 +6,7 @@ import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey.DirectEntryPrivateKeySource;
 import com.cloudbees.mtslaves.client.BrokerRef;
 import com.cloudbees.mtslaves.client.HardwareSpec;
+import com.cloudbees.mtslaves.client.MansionRef;
 import com.cloudbees.mtslaves.client.SnapshotRef;
 import com.cloudbees.mtslaves.client.VirtualMachineConfigurationException;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
@@ -113,9 +114,16 @@ public class MansionCloud extends AbstractCloudImpl {
                         new DirectEntryPrivateKeySource(encodePrivateKey(id)),null,null);
 
                 spec.sshd(JENKINS_USER, publicKey.trim());
-		//TODO : allow user to configure oauth token from credentials plugin
-                final VirtualMachineRef vm =
-                        new BrokerRef(broker).createVirtualMachine(HardwareSpec.SMALL, "88e7313d64af5ee654525625885be2781eb9bae0");
+                final VirtualMachineRef vm;
+
+    		    //TODO : allow user to configure oauth token from credentials plugin
+                String oauthToken = "88e7313d64af5ee654525625885be2781eb9bae0";
+
+                if (MANSION_SECRET==null)
+                    vm = new BrokerRef(broker).createVirtualMachine(HardwareSpec.SMALL, oauthToken);
+                else
+                    vm = new MansionRef(broker,MANSION_SECRET).createVirtualMachine(HardwareSpec.SMALL, oauthToken);
+
                 LOGGER.fine("Allocated "+vm.url);
                 try {
                     vm.setup(spec);
@@ -214,7 +222,13 @@ public class MansionCloud extends AbstractCloudImpl {
     private static final Logger LOGGER = Logger.getLogger(MansionCloud.class.getName());
 
     /**
-     * User name to create inside the virtual machine and login as.
+     * UNIX user name to be created inside the slave to be used for build.
      */
     public static final String JENKINS_USER = "jenkins";
+
+    /**
+     * This property can be set to the secret key of the mansion to let this plugin talk directly to
+     * a mansion without going through a broker. Useful during development.
+     */
+    public static String MANSION_SECRET = System.getProperty("mansion.secret");
 }
