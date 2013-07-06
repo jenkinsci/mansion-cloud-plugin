@@ -84,16 +84,10 @@
         <version>1.96</version>
         <configuration>
           <systemProperties>
-            <systemProperty>
-              <!-- NodeProvisioner runs x100 the normal speed (which is 10000) to reduce the delay till the provisioning attempt -->
-              <name>hudson.model.LoadStatistics.clock</name>
-              <value>1000</value>
-            </systemProperty>
-            <systemProperty>
-              <!--Deallocate quickly -->
-              <name>com.cloudbees.jenkins.plugins.mtslavescloud.CloudSlaveRetentionstrategy.timeout</name>
-              <value>5000</value>
-            </systemProperty>
+            <!-- NodeProvisioner runs x100 the normal speed (which is 10000) to reduce the delay till the provisioning attempt -->
+            <hudson.model.LoadStatistics.clock>1000</hudson.model.LoadStatistics.clock>
+            <!--Deallocate quickly -->
+            <com.cloudbees.jenkins.plugins.mtslavescloud.CloudSlaveRetentionstrategy.timeout>5000</com.cloudbees.jenkins.plugins.mtslavescloud.CloudSlaveRetentionstrategy.timeout>
           </systemProperties>
         </configuration>
       </plugin>
