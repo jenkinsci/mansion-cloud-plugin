@@ -30,8 +30,14 @@
     <dependency><!-- work around JENKINS-13754 -->
       <groupId>org.kohsuke.stapler</groupId>
       <artifactId>stapler</artifactId>
-      <version>1.208-SNAPSHOT</version>
+      <version>1.213</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.kohsuke.stapler</groupId>
+          <artifactId>json-lib</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
@@ -42,6 +48,12 @@
       <groupId>com.cloudbees.mtslaves</groupId>
       <artifactId>mansion-client</artifactId>
       <version>1.0-SNAPSHOT</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.kohsuke.stapler</groupId>
+          <artifactId>json-lib</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
@@ -69,6 +81,7 @@
       <plugin>
         <groupId>org.jenkins-ci.tools</groupId>
         <artifactId>maven-hpi-plugin</artifactId>
+        <version>1.96</version>
         <configuration>
           <systemProperties>
             <systemProperty>

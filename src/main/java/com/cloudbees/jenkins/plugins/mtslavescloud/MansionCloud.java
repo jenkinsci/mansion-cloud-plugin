@@ -120,11 +120,12 @@ public class MansionCloud extends AbstractCloudImpl {
 
     		    //TODO : allow user to configure oauth token from credentials plugin
                 String oauthToken = "88e7313d64af5ee654525625885be2781eb9bae0";
+                HardwareSpec box = new HardwareSpec("small");
 
                 if (MANSION_SECRET==null)
-                    vm = new BrokerRef(broker).createVirtualMachine(HardwareSpec.SMALL, oauthToken);
+                    vm = new BrokerRef(broker).createVirtualMachine(box, oauthToken);
                 else
-                    vm = new MansionRef(broker,MANSION_SECRET).createVirtualMachine(HardwareSpec.SMALL, oauthToken);
+                    vm = new MansionRef(broker,MANSION_SECRET).createVirtualMachine(box, oauthToken);
 
                 LOGGER.fine("Allocated "+vm.url);
                 try {

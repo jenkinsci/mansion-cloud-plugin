@@ -24,7 +24,7 @@ class VirtualMachineSpecTest {
     @Test
     void testBroker() {
         def b = new BrokerRef(new URL("http://localhost:8090/lxc/"));
-        VirtualMachineRef vm = b.createVirtualMachine(HardwareSpec.SMALL, "88e7313d64af5ee654525625885be2781eb9bae0");
+        VirtualMachineRef vm = b.createVirtualMachine(new HardwareSpec("small"), "88e7313d64af5ee654525625885be2781eb9bae0");
         vm.bootSync();
     }
 }
