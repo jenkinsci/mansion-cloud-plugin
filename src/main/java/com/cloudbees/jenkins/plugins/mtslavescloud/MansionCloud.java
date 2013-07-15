@@ -110,7 +110,7 @@ public class MansionCloud extends AbstractCloudImpl {
                 // so just reuse the Jenkins instance identity for a convenience, since this key is readily available,
                 // and its private key is hidden to the master.
                 InstanceIdentity id = InstanceIdentity.get();
-                String publicKey = "ssh_rsa "+new String(Base64.encodeBase64(id.getPublic().getEncoded()))+" "+Jenkins.getInstance().getRootUrl();
+                String publicKey = encodePublicKey(id);
 
                 final SSHUser sshCred = new BasicSSHUserPrivateKey(null,null, JENKINS_USER,
                         new DirectEntryPrivateKeySource(encodePrivateKey(id)),null,null);
@@ -196,17 +196,10 @@ public class MansionCloud extends AbstractCloudImpl {
         }
     }
 
-    private String getPublicKey(SSHUserPrivateKey user) throws IOException {
-        Object decode = PEMDecoder.decode(user.getPrivateKey().toCharArray(), user.getPassphrase().getEncryptedValue());
-        String sshPublicKey = null;
-        if (decode instanceof DSAPrivateKey) {
-            DSAPublicKey publicKey = ((DSAPrivateKey) decode).getPublicKey();
-            sshPublicKey = "ssh-dsa " + new String(hudson.remoting.Base64.encode(DSASHA1Verify.encodeSSHDSAPublicKey(publicKey)));
-
-        } else {
-            RSAPublicKey publicKey = ((RSAPrivateKey) decode).getPublicKey();
-            sshPublicKey = "ssh-rsa " + new String(hudson.remoting.Base64.encode(RSASHA1Verify.encodeSSHRSAPublicKey(publicKey)));
-        } return sshPublicKey;
+    // TODO: move this to instance-identity module
+    private String encodePublicKey(InstanceIdentity id) throws IOException {
+        java.security.interfaces.RSAPublicKey key = id.getPublic();
+        return "ssh-rsa " + hudson.remoting.Base64.encode(RSASHA1Verify.encodeSSHRSAPublicKey(new RSAPublicKey(key.getPublicExponent(),key.getModulus())));
     }
 
     public static MansionCloud get() {
