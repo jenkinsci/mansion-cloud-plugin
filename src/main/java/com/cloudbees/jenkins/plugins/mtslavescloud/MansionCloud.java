@@ -188,7 +188,7 @@ public class MansionCloud extends AbstractCloudImpl {
         try {
             StringBuilder buf = new StringBuilder();
             buf.append("-----BEGIN RSA PRIVATE KEY-----\n");
-            buf.append(new String(Base64.encodeBase64(id.getPrivate().getEncoded()),"US-ASCII"));
+            buf.append(new String(Base64.encodeBase64(id.getPrivate().getEncoded()),"US-ASCII")).append("\n");
             buf.append("-----END RSA PRIVATE KEY-----\n");
             return buf.toString();
         } catch (UnsupportedEncodingException e) {
