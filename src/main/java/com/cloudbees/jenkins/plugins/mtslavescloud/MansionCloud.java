@@ -33,10 +33,12 @@ import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.DescribableList;
 import jenkins.model.Jenkins;
 import org.apache.commons.codec.binary.Base64;
+import org.bouncycastle.openssl.PEMWriter;
 import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -186,13 +188,13 @@ public class MansionCloud extends AbstractCloudImpl {
     // TODO: move this to instance-identity-module
     private String encodePrivateKey(InstanceIdentity id) {
         try {
-            StringBuilder buf = new StringBuilder();
-            buf.append("-----BEGIN RSA PRIVATE KEY-----\n");
-            buf.append(new String(Base64.encodeBase64(id.getPrivate().getEncoded()),"US-ASCII")).append("\n");
-            buf.append("-----END RSA PRIVATE KEY-----\n");
-            return buf.toString();
-        } catch (UnsupportedEncodingException e) {
-            throw new AssertionError(e); // US-ASCII is mandatory
+            StringWriter sw = new StringWriter();
+            PEMWriter pem = new PEMWriter(sw);
+            pem.writeObject(id.getPrivate());
+            pem.close();
+            return sw.toString();
+        } catch (IOException e) {
+            throw new Error(e);
         }
     }
 
