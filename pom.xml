@@ -37,6 +37,14 @@
           <groupId>org.kohsuke.stapler</groupId>
           <artifactId>json-lib</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -52,6 +60,10 @@
         <exclusion>
           <groupId>org.kohsuke.stapler</groupId>
           <artifactId>json-lib</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
