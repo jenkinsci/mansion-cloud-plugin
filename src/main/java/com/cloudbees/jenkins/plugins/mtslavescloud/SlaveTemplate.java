@@ -2,15 +2,21 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
+import hudson.XmlFile;
 import hudson.util.IOUtils;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import net.sf.json.JsonConfig;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.commons.io.IOUtils.*;
@@ -38,11 +44,26 @@ public class SlaveTemplate {
      */
     public JSONObject spec;
 
+    /**
+     * Of the file systems that are specified in {@link #spec}, designate ones that
+     * should be carried over to the next session.
+     */
+    public List<String> persistentFileSystems = new ArrayList<String>();
+
     public void populate(VirtualMachineSpec spec) {
         JSONArray configs = this.spec.optJSONArray("configs");
         if (configs!=null) {
             spec.configs.addAll(configs);
         }
+    }
+
+    /**
+     * Gets the current clan of {@link FileSystemLineage}s this master has for this slave template.
+     */
+    public FileSystemClan loadClan() throws IOException {
+        FileSystemClan clan = new FileSystemClan(this);
+        clan.load();
+        return clan;
     }
 
     public static Map<String,SlaveTemplate> load(InputStream in) throws IOException {

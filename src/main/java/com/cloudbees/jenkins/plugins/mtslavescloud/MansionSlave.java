@@ -1,9 +1,6 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
-import com.cloudbees.mtslaves.client.FileSystemRef;
-import com.cloudbees.mtslaves.client.SnapshotRef;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
-import com.cloudbees.mtslaves.client.properties.FileSystemsProperty;
 import hudson.Util;
 import hudson.model.Descriptor.FormException;
 import hudson.model.Node;
@@ -25,8 +22,9 @@ import java.util.logging.Logger;
  */
 public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
     private final VirtualMachineRef vm;
+    private final SlaveTemplate template;
 
-    public MansionSlave(VirtualMachineRef vm, ComputerLauncher launcher ) throws FormException, IOException {
+    public MansionSlave(VirtualMachineRef vm, SlaveTemplate template, ComputerLauncher launcher ) throws FormException, IOException {
         super(
                 Util.getDigestOf(vm.getId()).substring(0,8),
                 "Virtual machine provisioned from "+vm.url,
@@ -38,6 +36,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
                 new CloudSlaveRetentionstrategy(),
                 Collections.<NodeProperty<?>>emptyList());
         this.vm = vm;
+        this.template = template;
 
         // suspend retention strategy until we do the initial launch
         this.holdOffLaunchUntilSave = true;
@@ -65,12 +64,8 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
-        FileSystemRef rootFs = new FileSystemRef(
-                vm.getState().getProperty(FileSystemsProperty.class).getFileSystemUrlFor("/"),
-                "88e7313d64af5ee654525625885be2781eb9bae0");
-
-        SnapshotRef snapshot = rootFs.snapshot();
-        MansionCloud.get().lastSnapshot = snapshot;
+        FileSystemClan clan = template.loadClan();
+        clan.update(vm.getState());
         vm.dispose();
         listener.getLogger().println("Disposed " + vm.url);
     }

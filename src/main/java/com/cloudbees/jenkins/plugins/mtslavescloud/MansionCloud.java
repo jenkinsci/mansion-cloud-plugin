@@ -1,7 +1,6 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
-import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey.DirectEntryPrivateKeySource;
 import com.cloudbees.mtslaves.client.BrokerRef;
@@ -12,11 +11,6 @@ import com.cloudbees.mtslaves.client.VirtualMachineConfigurationException;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.SshdEndpointProperty;
-import com.trilead.ssh2.crypto.PEMDecoder;
-import com.trilead.ssh2.signature.DSAPrivateKey;
-import com.trilead.ssh2.signature.DSAPublicKey;
-import com.trilead.ssh2.signature.DSASHA1Verify;
-import com.trilead.ssh2.signature.RSAPrivateKey;
 import com.trilead.ssh2.signature.RSAPublicKey;
 import com.trilead.ssh2.signature.RSASHA1Verify;
 import hudson.CopyOnWrite;
@@ -33,19 +27,18 @@ import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.DescribableList;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
-import org.apache.commons.codec.binary.Base64;
 import org.bouncycastle.openssl.PEMWriter;
 import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -53,6 +46,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * {@link Cloud} implementation that talks to CloudBees' multi-tenant slaves.
+ *
  * @author Kohsuke Kawaguchi
  */
 public class MansionCloud extends AbstractCloudImpl {
@@ -117,7 +112,7 @@ public class MansionCloud extends AbstractCloudImpl {
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
         LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
 
-        SlaveTemplate st = resolveToTemplate(label);
+        final SlaveTemplate st = resolveToTemplate(label);
 
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
@@ -128,17 +123,7 @@ public class MansionCloud extends AbstractCloudImpl {
                 }
                 st.populate(spec);
 
-                if (lastSnapshot != null) {
-                    // SCAFFOLD: just for now. remove fileSystem definition from the current spec
-                    for (JSONObject c : Util.filter(spec.configs,JSONObject.class)) {
-                        if (c.getString("type").equals("fileSystem")) {
-                            spec.configs.remove(c);
-                            break;
-                        }
-                    }
-                    // TODO: not sure where is the right place to store snapshots, but it's not in MansionCloud that's for sure
-                    spec.fs(lastSnapshot.url,"/");
-                }
+                st.loadClan().applyTo(spec);    // if we have more up-to-date snapshots, use them
 
                 // we need an SSH key pair to securely login to the allocated slave, but it does't matter what key to use.
                 // so just reuse the Jenkins instance identity for a convenience, since this key is readily available,
@@ -177,7 +162,7 @@ public class MansionCloud extends AbstractCloudImpl {
                         SSHLauncher launcher = new SSHLauncher(
                                 // Linux slaves can run without it, but OS X slaves need java.awt.headless=true
                                 sshd.getHost(), sshd.getPort(), sshCred, "-Djava.awt.headless=true", null, null, null);
-                        MansionSlave s = new MansionSlave(vm, launcher);
+                        MansionSlave s = new MansionSlave(vm,st,launcher);
 
                         try {
                             // connect before we declare victory
