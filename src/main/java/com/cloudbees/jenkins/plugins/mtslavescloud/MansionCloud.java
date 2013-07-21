@@ -34,10 +34,12 @@ import hudson.util.DescribableList;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.apache.commons.codec.binary.Base64;
+import org.bouncycastle.openssl.PEMWriter;
 import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -142,7 +144,7 @@ public class MansionCloud extends AbstractCloudImpl {
                 // so just reuse the Jenkins instance identity for a convenience, since this key is readily available,
                 // and its private key is hidden to the master.
                 InstanceIdentity id = InstanceIdentity.get();
-                String publicKey = "ssh_rsa "+new String(Base64.encodeBase64(id.getPublic().getEncoded()))+" "+Jenkins.getInstance().getRootUrl();
+                String publicKey = encodePublicKey(id);
 
                 final SSHUser sshCred = new BasicSSHUserPrivateKey(null,null, JENKINS_USER,
                         new DirectEntryPrivateKeySource(encodePrivateKey(id)),null,null);
@@ -173,7 +175,8 @@ public class MansionCloud extends AbstractCloudImpl {
                         LOGGER.fine("Booted " + vm.url);
                         SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
                         SSHLauncher launcher = new SSHLauncher(
-                                sshd.getHost(), sshd.getPort(), sshCred, null, null, null, null);
+                                // Linux slaves can run without it, but OS X slaves need java.awt.headless=true
+                                sshd.getHost(), sshd.getPort(), sshCred, "-Djava.awt.headless=true", null, null, null);
                         MansionSlave s = new MansionSlave(vm, launcher);
 
                         try {
@@ -218,27 +221,20 @@ public class MansionCloud extends AbstractCloudImpl {
     // TODO: move this to instance-identity-module
     private String encodePrivateKey(InstanceIdentity id) {
         try {
-            StringBuilder buf = new StringBuilder();
-            buf.append("-----BEGIN RSA PRIVATE KEY-----\n");
-            buf.append(new String(Base64.encodeBase64(id.getPrivate().getEncoded()),"US-ASCII"));
-            buf.append("-----END RSA PRIVATE KEY-----\n");
-            return buf.toString();
-        } catch (UnsupportedEncodingException e) {
-            throw new AssertionError(e); // US-ASCII is mandatory
+            StringWriter sw = new StringWriter();
+            PEMWriter pem = new PEMWriter(sw);
+            pem.writeObject(id.getPrivate());
+            pem.close();
+            return sw.toString();
+        } catch (IOException e) {
+            throw new Error(e);
         }
     }
 
-    private String getPublicKey(SSHUserPrivateKey user) throws IOException {
-        Object decode = PEMDecoder.decode(user.getPrivateKey().toCharArray(), user.getPassphrase().getEncryptedValue());
-        String sshPublicKey = null;
-        if (decode instanceof DSAPrivateKey) {
-            DSAPublicKey publicKey = ((DSAPrivateKey) decode).getPublicKey();
-            sshPublicKey = "ssh-dsa " + new String(hudson.remoting.Base64.encode(DSASHA1Verify.encodeSSHDSAPublicKey(publicKey)));
-
-        } else {
-            RSAPublicKey publicKey = ((RSAPrivateKey) decode).getPublicKey();
-            sshPublicKey = "ssh-rsa " + new String(hudson.remoting.Base64.encode(RSASHA1Verify.encodeSSHRSAPublicKey(publicKey)));
-        } return sshPublicKey;
+    // TODO: move this to instance-identity module
+    private String encodePublicKey(InstanceIdentity id) throws IOException {
+        java.security.interfaces.RSAPublicKey key = id.getPublic();
+        return "ssh-rsa " + hudson.remoting.Base64.encode(RSASHA1Verify.encodeSSHRSAPublicKey(new RSAPublicKey(key.getPublicExponent(),key.getModulus())));
     }
 
     public static MansionCloud get() {
