@@ -143,7 +143,8 @@ public class MansionCloud extends AbstractCloudImpl {
                         LOGGER.fine("Booted " + vm.url);
                         SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
                         SSHLauncher launcher = new SSHLauncher(
-                                sshd.getHost(), sshd.getPort(), sshCred, null, null, null, null);
+                                // Linux slaves can run without it, but OS X slaves need java.awt.headless=true
+                                sshd.getHost(), sshd.getPort(), sshCred, "-Djava.awt.headless=true", null, null, null);
                         MansionSlave s = new MansionSlave(vm, launcher);
 
                         try {
