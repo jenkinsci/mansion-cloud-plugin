@@ -31,7 +31,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
                 "/scratch/jenkins", // TODO:
                 1,
                 Mode.NORMAL,
-                "", // TODO
+                template.id+" cloudbees",
                 launcher,
                 new CloudSlaveRetentionstrategy(),
                 Collections.<NodeProperty<?>>emptyList());
@@ -54,12 +54,6 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
     public Node asNode() {
         return this;
-    }
-
-    @Override
-    public String getLabelString() {
-        //temporary hack
-        return "mansion";
     }
 
     @Override
