@@ -134,7 +134,7 @@ public class MansionCloud extends AbstractCloudImpl {
                 final SSHUser sshCred = new BasicSSHUserPrivateKey(null,null, JENKINS_USER,
                         new DirectEntryPrivateKeySource(encodePrivateKey(id)),null,null);
 
-                spec.sshd(JENKINS_USER, publicKey.trim());
+                spec.sshd(JENKINS_USER, 15000, publicKey.trim()); // TODO: should UID be configurable?
                 final VirtualMachineRef vm;
 
     		    //TODO : allow user to configure oauth token from credentials plugin
