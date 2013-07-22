@@ -141,6 +141,7 @@ public class MansionCloud extends AbstractCloudImpl {
                 String oauthToken = "88e7313d64af5ee654525625885be2781eb9bae0";
                 HardwareSpec box = new HardwareSpec("small");
 
+                URL broker = new URL(this.broker,"/"+st.mansion+"/");
                 if (MANSION_SECRET==null)
                     vm = new BrokerRef(broker).createVirtualMachine(box, oauthToken);
                 else

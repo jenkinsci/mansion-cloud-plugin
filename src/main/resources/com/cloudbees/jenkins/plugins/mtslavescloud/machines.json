@@ -2,6 +2,7 @@
     {
         "id" : "lxc-fedora17",
         "displayName" : "Fedora 17 LXC slave",
+        "mansion": "lxc",
         "spec" : {
             "configs" : [
                 {
@@ -20,6 +21,7 @@
     {
         "id" : "osx",
         "displayName" : "Mac OS X",
+        "mansion": "osx",
         "spec" : {
             "configs" : [
                 {

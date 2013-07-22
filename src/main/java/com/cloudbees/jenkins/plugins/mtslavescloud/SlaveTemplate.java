@@ -43,6 +43,10 @@ public class SlaveTemplate {
      * Configuration JSON object to be passed to {@link VirtualMachineRef#setup(VirtualMachineSpec)}
      */
     public JSONObject spec;
+    /**
+     * Type of the mansion that this template lives in.
+     */
+    public String mansion;
 
     /**
      * Of the file systems that are specified in {@link #spec}, designate ones that
