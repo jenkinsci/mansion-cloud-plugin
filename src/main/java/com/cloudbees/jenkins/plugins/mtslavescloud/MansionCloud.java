@@ -83,8 +83,7 @@ public class MansionCloud extends AbstractCloudImpl {
 
     @Override
     public boolean canProvision(Label label) {
-        // TODO: we'll likely support multiple kinds of slaves like EC2 plugin does in the future
-        return true;
+        return resolveToTemplate(label)!=null;
     }
 
     /**
