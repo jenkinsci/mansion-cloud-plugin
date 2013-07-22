@@ -79,11 +79,21 @@ public class SlaveTemplate {
             Map<String,SlaveTemplate> r = new LinkedHashMap<String, SlaveTemplate>();
             for (SlaveTemplate t : list.templates) {
                 r.put(t.id,t);
+                // json-lib fails to bind a property whose type is JSONObject, so fix that up
+                t.spec = findSpec(js,t.id);
             }
             return r;
         } finally {
             closeQuietly(in);
         }
+    }
+
+    private static JSONObject findSpec(JSONObject js, String id) {
+        for (JSONObject o : (List< JSONObject>)(List)js.getJSONArray("templates")) {
+            if (o.getString("id").equals(id))
+                return o.getJSONObject("spec");
+        }
+        return null;
     }
 
     public static final class TemplateList {
