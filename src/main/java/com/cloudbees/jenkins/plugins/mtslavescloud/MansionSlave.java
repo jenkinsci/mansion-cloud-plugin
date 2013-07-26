@@ -3,6 +3,7 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import hudson.Util;
 import hudson.model.Descriptor.FormException;
+import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.Slave;
 import hudson.model.TaskListener;
@@ -24,14 +25,14 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
     private final VirtualMachineRef vm;
     private final SlaveTemplate template;
 
-    public MansionSlave(VirtualMachineRef vm, SlaveTemplate template, ComputerLauncher launcher ) throws FormException, IOException {
+    public MansionSlave(VirtualMachineRef vm, SlaveTemplate template, Label label, ComputerLauncher launcher) throws FormException, IOException {
         super(
                 Util.getDigestOf(vm.getId()).substring(0,8),
                 "Virtual machine provisioned from "+vm.url,
                 "/scratch/jenkins", // TODO:
                 1,
                 Mode.NORMAL,
-                "", // TODO
+                label.getDisplayName(),
                 launcher,
                 new CloudSlaveRetentionstrategy(),
                 Collections.<NodeProperty<?>>emptyList());
@@ -54,12 +55,6 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
     public Node asNode() {
         return this;
-    }
-
-    @Override
-    public String getLabelString() {
-        //temporary hack
-        return "mansion";
     }
 
     @Override

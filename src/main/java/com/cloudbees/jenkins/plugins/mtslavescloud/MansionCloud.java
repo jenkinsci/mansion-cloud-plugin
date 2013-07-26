@@ -109,7 +109,7 @@ public class MansionCloud extends AbstractCloudImpl {
 
 
     @Override
-    public Collection<PlannedNode> provision(Label label, int excessWorkload) {
+    public Collection<PlannedNode> provision(final Label label, int excessWorkload) {
         LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
 
         final SlaveTemplate st = resolveToTemplate(label);
@@ -165,7 +165,7 @@ public class MansionCloud extends AbstractCloudImpl {
                         SSHLauncher launcher = new SSHLauncher(
                                 // Linux slaves can run without it, but OS X slaves need java.awt.headless=true
                                 sshd.getHost(), sshd.getPort(), sshCred, "-Djava.awt.headless=true", null, null, null);
-                        MansionSlave s = new MansionSlave(vm,st,launcher);
+                        MansionSlave s = new MansionSlave(vm,st,label,launcher);
 
                         try {
                             // connect before we declare victory
