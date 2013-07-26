@@ -1,7 +1,9 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
+import hudson.Extension;
 import hudson.Util;
+import hudson.model.AsyncPeriodicWork;
 import hudson.model.Descriptor.FormException;
 import hudson.model.Label;
 import hudson.model.Node;
@@ -11,9 +13,12 @@ import hudson.slaves.AbstractCloudSlave;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.EphemeralNode;
 import hudson.slaves.NodeProperty;
+import jenkins.model.Jenkins;
 
+import javax.inject.Inject;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -22,6 +27,7 @@ import java.util.logging.Logger;
  * @author Kohsuke Kawaguchi
  */
 public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
+    public static final int LEASE_RENEWAL_PERIOD_SECONDS = Integer.getInteger(MansionSlave.class.getName() + ".LEASE_RENEWAL_PERIOD_SECONDS", 30);
     private final VirtualMachineRef vm;
     private final SlaveTemplate template;
 
@@ -57,6 +63,10 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
         return this;
     }
 
+    private void renewLease() throws IOException {
+        vm.renew();
+    }
+
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         FileSystemClan clan = template.loadClan();
@@ -66,4 +76,30 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
     }
 
     private static final Logger LOGGER = Logger.getLogger(MansionSlave.class.getName());
+
+    @Extension
+    public static class MansionLeaseRenewal extends AsyncPeriodicWork {
+
+        @Inject
+        Jenkins jenkins;
+
+        public MansionLeaseRenewal() {
+            super("Mansion Lease Renewal");
+        }
+
+        @Override
+        public long getRecurrencePeriod() {
+            return TimeUnit.SECONDS.toMillis(LEASE_RENEWAL_PERIOD_SECONDS);
+        }
+
+        @Override
+        protected void execute(TaskListener listener) throws IOException, InterruptedException {
+            for (Node n : jenkins.getNodes()) {
+                if (n instanceof MansionSlave) {
+                    ((MansionSlave)n).renewLease();
+                }
+            }
+        }
+    }
+
 }
