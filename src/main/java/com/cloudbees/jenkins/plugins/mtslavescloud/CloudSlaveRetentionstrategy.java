@@ -21,7 +21,7 @@ import java.util.logging.Logger;
  * @author Kohsuke Kawaguchi
  */
 // TODO: post 1.510, use CloudSlaveRetentionstrategy from core
-public class CloudSlaveRetentionstrategy<T extends Computer> extends RetentionStrategy<T> {
+public class CloudSlaveRetentionstrategy<T extends MansionComputer> extends RetentionStrategy<T> {
 
     @Override
     public long check(T c) {
@@ -60,7 +60,7 @@ public class CloudSlaveRetentionstrategy<T extends Computer> extends RetentionSt
      * Has this computer been idle for too long?
      */
     protected boolean isIdleForTooLong(T c) {
-        return System.currentTimeMillis()-c.getIdleStartMilliseconds() > getIdleMaxTime();
+        return c.getLaunchedTime() != null && System.currentTimeMillis()-Math.max(c.getIdleStartMilliseconds(),c.getLaunchedTime()) > getIdleMaxTime();
     }
 
     /**
