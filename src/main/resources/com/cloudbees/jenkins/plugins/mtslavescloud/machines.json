@@ -12,7 +12,7 @@
                 },
                 {
                     "type" : "lxcNetwork",
-                    "hostName" : "jenkins"
+                    "hostname" : "jenkins"
                 }
             ]
         },
