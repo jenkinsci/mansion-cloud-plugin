@@ -1,6 +1,7 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud.client
 
 import net.sf.json.JSONObject
+import org.junit.Ignore
 import org.junit.Test
 
 import com.cloudbees.mtslaves.client.*;
@@ -22,6 +23,7 @@ class VirtualMachineSpecTest {
     }
 
     @Test
+    @Ignore
     void testBroker() {
         def b = new BrokerRef(new URL("http://localhost:8090/lxc/"));
         VirtualMachineRef vm = b.createVirtualMachine(new HardwareSpec("small"), "88e7313d64af5ee654525625885be2781eb9bae0");
