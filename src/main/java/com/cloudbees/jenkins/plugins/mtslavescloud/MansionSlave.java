@@ -38,9 +38,9 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
                 "/scratch/jenkins", // TODO:
                 1,
                 Mode.NORMAL,
-                label.getDisplayName(),
+                label == null ? "" : label.getDisplayName(),
                 launcher,
-                new CloudSlaveRetentionstrategy(),
+                new MansionRetentionStrategy(),
                 Collections.<NodeProperty<?>>emptyList());
         this.vm = vm;
         this.template = template;

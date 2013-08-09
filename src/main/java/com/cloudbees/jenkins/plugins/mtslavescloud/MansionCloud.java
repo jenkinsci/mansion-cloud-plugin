@@ -1,6 +1,7 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey.DirectEntryPrivateKeySource;
 import com.cloudbees.mtslaves.client.BrokerRef;
@@ -97,8 +98,11 @@ public class MansionCloud extends AbstractCloudImpl {
     private SlaveTemplate resolveToTemplate(Label label) {
         try {
             Map<String,SlaveTemplate> m = SlaveTemplate.load(this.getClass().getResourceAsStream("machines.json"));
-            SlaveTemplate s = m.get(label.toString());
-            if (s!=null)    return s;
+
+            if (label != null) {
+                SlaveTemplate s = m.get(label.toString());
+                if (s!=null)    return s;
+            }
 
             // until we tidy up the template part, fall back to LXC as the default so as not to block Ryan
             return m.get("lxc-fedora17");
@@ -131,7 +135,7 @@ public class MansionCloud extends AbstractCloudImpl {
                 InstanceIdentity id = InstanceIdentity.get();
                 String publicKey = encodePublicKey(id);
 
-                final SSHUser sshCred = new BasicSSHUserPrivateKey(null,null, JENKINS_USER,
+                final SSHUserPrivateKey sshCred = new BasicSSHUserPrivateKey(null,null, JENKINS_USER,
                         new DirectEntryPrivateKeySource(encodePrivateKey(id)),null,null);
 
                 //TODO shouldn't really need to pass this since templates should

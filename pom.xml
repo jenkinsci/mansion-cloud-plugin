@@ -79,6 +79,12 @@
       <version>1.2</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.cloudbees.dev-at-cloud.plugins</groupId>
+      <artifactId>swarm</artifactId>
+      <version>1.26</version>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>
