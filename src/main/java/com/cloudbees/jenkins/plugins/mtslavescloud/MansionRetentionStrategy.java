@@ -73,5 +73,18 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
         return c.getLaunchedTime() != null && System.currentTimeMillis()-Math.max(c.getIdleStartMilliseconds(),c.getLaunchedTime()) > getIdleMaxTime();
     }
 
+    /**
+     * If the computer has been idle longer than this time, we'll kill the slave.
+     */
+    protected long getIdleMaxTime() {
+        return TIMEOUT;
+    }
+
+    /**
+     * How long a slave can be idle before being terminated
+     */
+    public static long TIMEOUT = Long.getLong(CloudSlaveRetentionstrategy.class.getName()+".timeout", TimeUnit2.SECONDS.toMillis(5));
+
+
     private static Logger LOGGER  = Logger.getLogger(MansionRetentionStrategy.class.getName());
 }

@@ -28,7 +28,8 @@ public class IdleMonitor extends RunListener<Run> {
     public void onCompleted(Run r, TaskListener listener) {
         Computer.threadPoolForRemoting.submit(new Callable<Void>() {
             public Void call() throws Exception {
-                Thread.sleep(2000 + 1000 * Config.getSlaveIdleTimeInSeconds());
+                // sleep long enough for a computer to become idle, if possible
+                Thread.sleep(MansionRetentionStrategy.TIMEOUT + 2000);
                 for (Computer c : Jenkins.getInstance().getComputers()) {
                     if (c instanceof MansionComputer) {
                         c.getRetentionStrategy().check(c);
