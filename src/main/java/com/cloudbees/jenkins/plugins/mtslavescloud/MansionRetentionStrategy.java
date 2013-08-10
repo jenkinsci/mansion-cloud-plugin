@@ -2,11 +2,13 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.dac.storage.Storage;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
+import hudson.ExtensionList;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Node;
 import hudson.model.Slave;
 import hudson.plugins.sshslaves.SSHLauncher;
+import hudson.util.TimeUnit2;
 import jenkins.model.Jenkins;
 
 import java.io.IOException;
@@ -24,7 +26,12 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
     protected void kill(final Node node) throws IOException {
         try {
             //Storage is registered as an extension so we can look it up
-            final Storage storage = Jenkins.getInstance().getExtensionList(Storage.class).get(0);
+            ExtensionList<Storage> extensionList = Jenkins.getInstance().getExtensionList(Storage.class);
+            if (extensionList.size() == 0) {
+                super.kill(node);
+                return;
+            }
+            final Storage storage = extensionList.get(0);
             final MansionComputer computer = (MansionComputer) node.toComputer();
             computer.acceptingTasks = false;
 
