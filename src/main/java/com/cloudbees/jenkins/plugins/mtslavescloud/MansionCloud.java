@@ -1,6 +1,6 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
-import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
+import com.cloudbees.jenkins.plugins.mtslavescloud.util.BackOffCounter;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey.DirectEntryPrivateKeySource;
@@ -27,7 +27,6 @@ import hudson.slaves.Cloud;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.DescribableList;
 import jenkins.model.Jenkins;
-import net.sf.json.JSONObject;
 import org.bouncycastle.openssl.PEMWriter;
 import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -37,12 +36,13 @@ import java.io.StringWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -55,6 +55,8 @@ public class MansionCloud extends AbstractCloudImpl {
     private final URL broker;
 
     public SnapshotRef lastSnapshot = null;
+
+    private transient BackOffCounter backoffCounter;
 
     /**
      * List of {@link MansionCloudProperty}s configured for this project.
@@ -69,6 +71,16 @@ public class MansionCloud extends AbstractCloudImpl {
         this.broker = broker;
         if (properties!=null)
             this.properties.replaceBy(properties);
+        initTransient();
+    }
+
+    private void initTransient() {
+        backoffCounter = new BackOffCounter(2,360, TimeUnit.SECONDS);
+    }
+
+    protected Object readResolve() {
+        initTransient();
+        return this;
     }
 
     public DescribableList<MansionCloudProperty, MansionCloudPropertyDescriptor> getProperties() {
@@ -114,6 +126,10 @@ public class MansionCloud extends AbstractCloudImpl {
 
     @Override
     public Collection<PlannedNode> provision(final Label label, int excessWorkload) {
+        if (backoffCounter.shouldBackOff()) {
+            return Collections.emptyList();
+        }
+
         LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
 
         final SlaveTemplate st = resolveToTemplate(label);
@@ -196,14 +212,24 @@ public class MansionCloud extends AbstractCloudImpl {
                         } finally {
                             s.cancelHoldOff();
                         }
-
+                        if (s.toComputer().isOffline()) {
+                            // if we can't connect, backoff before the next try
+                            MansionCloud.this.backoffCounter.recordError();
+                            LOGGER.log(Level.WARNING,"Failed to connect to slave over ssh, will try again in {0} seconds", backoffCounter.getBackOff());
+                        } else {
+                            // success!
+                            MansionCloud.this.backoffCounter.clear();
+                        }
                         return s;
                     }
                 });
                 r.add(new PlannedNode(vm.getId(),f,1));
             }
         } catch (IOException e) {
+            backoffCounter.recordError();
             LOGGER.log(Level.WARNING, "Failed to provision from "+this,e);
+            LOGGER.log(Level.WARNING,"Will try again in {0} seconds.", backoffCounter.getBackOff());
+
         } catch (InterruptedException e) {
             LOGGER.log(Level.WARNING, "Failed to provision from " + this, e);
         }
@@ -253,4 +279,10 @@ public class MansionCloud extends AbstractCloudImpl {
      * a mansion without going through a broker. Useful during development.
      */
     public static String MANSION_SECRET = System.getProperty("mansion.secret");
+
+    /**
+     * The maximum number of seconds to back off from provisioning if
+     * we continuously have problems provisioning or launching slaves.
+     */
+    public static Long MAX_BACKOFF_SECONDS = Long.getLong(MansionCloud.class.getName() + ".maxBackOffSeconds", 600);  // 5 minutes
 }
