@@ -6,6 +6,8 @@ import com.cloudbees.api.cr.Capability;
 import com.cloudbees.api.oauth.OauthClientException;
 import com.cloudbees.api.oauth.TokenRequest;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
+import com.cloudbees.jenkins.plugins.mtslavescloud.util.BackOffCounter;
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey.DirectEntryPrivateKeySource;
 import com.cloudbees.mtslaves.client.BrokerRef;
@@ -46,11 +48,14 @@ import java.io.StringWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.*;
@@ -71,6 +76,8 @@ public class MansionCloud extends AbstractCloudImpl {
 
     public SnapshotRef lastSnapshot = null;
 
+    private transient BackOffCounter backoffCounter;
+
     /**
      * List of {@link MansionCloudProperty}s configured for this project.
      */
@@ -85,6 +92,16 @@ public class MansionCloud extends AbstractCloudImpl {
         this.account = account;
         if (properties!=null)
             this.properties.replaceBy(properties);
+        initTransient();
+    }
+
+    private void initTransient() {
+        backoffCounter = new BackOffCounter(2,360, TimeUnit.SECONDS);
+    }
+
+    protected Object readResolve() {
+        initTransient();
+        return this;
     }
 
     public DescribableList<MansionCloudProperty, MansionCloudPropertyDescriptor> getProperties() {
@@ -117,8 +134,11 @@ public class MansionCloud extends AbstractCloudImpl {
     private SlaveTemplate resolveToTemplate(Label label) {
         try {
             Map<String,SlaveTemplate> m = SlaveTemplate.load(this.getClass().getResourceAsStream("machines.json"));
-            SlaveTemplate s = m.get(label.toString());
-            if (s!=null)    return s;
+
+            if (label != null) {
+                SlaveTemplate s = m.get(label.toString());
+                if (s!=null)    return s;
+            }
 
             // until we tidy up the template part, fall back to LXC as the default so as not to block Ryan
             return m.get("lxc-fedora17");
@@ -147,7 +167,11 @@ public class MansionCloud extends AbstractCloudImpl {
     }
 
     @Override
-    public Collection<PlannedNode> provision(Label label, int excessWorkload) {
+    public Collection<PlannedNode> provision(final Label label, int excessWorkload) {
+        if (backoffCounter.shouldBackOff()) {
+            return Collections.emptyList();
+        }
+
         LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
 
         final SlaveTemplate st = resolveToTemplate(label);
@@ -169,7 +193,7 @@ public class MansionCloud extends AbstractCloudImpl {
                 InstanceIdentity id = InstanceIdentity.get();
                 String publicKey = encodePublicKey(id);
 
-                final SSHUser sshCred = new BasicSSHUserPrivateKey(null,null, JENKINS_USER,
+                final SSHUserPrivateKey sshCred = new BasicSSHUserPrivateKey(null,null, JENKINS_USER,
                         new DirectEntryPrivateKeySource(encodePrivateKey(id)),null,null);
 
                 spec.sshd(JENKINS_USER, 15000, publicKey.trim()); // TODO: should UID be configurable?
@@ -201,7 +225,7 @@ public class MansionCloud extends AbstractCloudImpl {
                         SSHLauncher launcher = new SSHLauncher(
                                 // Linux slaves can run without it, but OS X slaves need java.awt.headless=true
                                 sshd.getHost(), sshd.getPort(), sshCred, "-Djava.awt.headless=true", null, null, null);
-                        MansionSlave s = new MansionSlave(vm,st,launcher);
+                        MansionSlave s = new MansionSlave(vm,st,label,launcher);
 
                         try {
                             // connect before we declare victory
@@ -228,14 +252,23 @@ public class MansionCloud extends AbstractCloudImpl {
                         } finally {
                             s.cancelHoldOff();
                         }
-
+                        if (s.toComputer().isOffline()) {
+                            // if we can't connect, backoff before the next try
+                            MansionCloud.this.backoffCounter.recordError();
+                            LOGGER.log(Level.WARNING,"Failed to connect to slave over ssh, will try again in {0} seconds", backoffCounter.getBackOff());
+                        } else {
+                            // success!
+                            MansionCloud.this.backoffCounter.clear();
+                        }
                         return s;
                     }
                 });
                 r.add(new PlannedNode(vm.getId(),f,1));
             }
         } catch (IOException e) {
+            backoffCounter.recordError();
             LOGGER.log(WARNING, "Failed to provision from "+this,e);
+            LOGGER.log(WARNING,"Will try again in {0} seconds.", backoffCounter.getBackOff());
         } catch (InterruptedException e) {
             LOGGER.log(WARNING, "Failed to provision from " + this, e);
         } catch (OauthClientException e) {
@@ -314,4 +347,9 @@ public class MansionCloud extends AbstractCloudImpl {
     public static boolean isInDevAtCloud() {
         return Jenkins.getInstance().getPlugin("cloudbees-account")!=null;
     }
+    /**
+     * The maximum number of seconds to back off from provisioning if
+     * we continuously have problems provisioning or launching slaves.
+     */
+    public static Long MAX_BACKOFF_SECONDS = Long.getLong(MansionCloud.class.getName() + ".maxBackOffSeconds", 600);  // 5 minutes
 }

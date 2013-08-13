@@ -77,7 +77,9 @@ public class SlaveTemplate {
             JSONObject js = JSONObject.fromObject(IOUtils.toString(in));
             TemplateList list = (TemplateList) JSONObject.toBean(js, TemplateList.class);
             Map<String,SlaveTemplate> r = new LinkedHashMap<String, SlaveTemplate>();
-            for (SlaveTemplate t : list.templates) {
+            for (int i = 0; i < list.templates.length; i++) {
+                SlaveTemplate t = list.templates[i];
+                t.spec = js.getJSONArray("templates").getJSONObject(i).getJSONObject("spec");
                 r.put(t.id,t);
                 // json-lib fails to bind a property whose type is JSONObject, so fix that up
                 t.spec = findSpec(js,t.id);

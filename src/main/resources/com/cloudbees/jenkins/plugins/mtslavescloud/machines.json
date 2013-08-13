@@ -12,7 +12,7 @@
                 },
                 {
                     "type" : "lxcNetwork",
-                    "hostName" : "jenkins"
+                    "hostname" : "jenkins"
                 }
             ]
         },
@@ -26,7 +26,7 @@
             "configs" : [
                 {
                     "type" : "fileSystem",
-                    "fileSystem" : "http://localhost:8080/zfs/osx-demo",
+                    "fileSystem" : "http://localhost:8080/zfs/osx-unity",
                     "path" : "/"
                 },
                 {
