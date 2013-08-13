@@ -92,13 +92,20 @@
     <dependency><!-- for entering credentials from UI -->
       <groupId>com.cloudbees.jenkins.plugins</groupId>
       <artifactId>cloudbees-registration</artifactId>
-      <version>3.12</version>
+      <version>3.11</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.cloudbees</groupId>
       <artifactId>cloudbees-api-client</artifactId>
       <version>1.5.3-SNAPSHOT</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.thoughtworks.xstream</groupId>
+          <artifactId>xstream</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
     <dependency>
       <groupId>com.cloudbees.dev-at-cloud.plugins</groupId>
       <artifactId>swarm</artifactId>
