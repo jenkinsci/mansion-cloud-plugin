@@ -78,6 +78,27 @@
       <version>1.2</version>
       <scope>provided</scope>
     </dependency>
+    <dependency><!-- for accessing the credentials -->
+      <groupId>com.cloudbees.jenkins.plugins</groupId>
+      <artifactId>cloudbees-credentials</artifactId>
+      <version>3.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.cloudbees</groupId>
+      <artifactId>endpoints</artifactId>
+      <version>0.5</version>
+    </dependency>
+    <dependency><!-- for entering credentials from UI -->
+      <groupId>com.cloudbees.jenkins.plugins</groupId>
+      <artifactId>cloudbees-registration</artifactId>
+      <version>3.11-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.cloudbees</groupId>
+      <artifactId>cloudbees-api-client</artifactId>
+      <version>1.5.3-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 
   <build>
