@@ -119,9 +119,22 @@ public class MansionCloud extends AbstractCloudImpl {
         return account;
     }
 
+    /**
+     * Determines which labels the {@NodeProvisioner will request this Cloud to provision.
+     *
+     * @param label
+     * @return true if the label is a valid template
+     */
     @Override
     public boolean canProvision(Label label) {
-        return resolveToTemplate(label)!=null;
+        try {
+            Map<String,SlaveTemplate> m = SlaveTemplate.load(this.getClass().getResourceAsStream("machines.json"));
+
+            return label == null || m.get(label.toString()) != null || label.toString().startsWith("m1.");
+        } catch (IOException e) {
+            throw new Error(e);
+        }
+
     }
 
     /**
@@ -136,7 +149,10 @@ public class MansionCloud extends AbstractCloudImpl {
             Map<String,SlaveTemplate> m = SlaveTemplate.load(this.getClass().getResourceAsStream("machines.json"));
 
             if (label != null) {
-                SlaveTemplate s = m.get(label.toString());
+                //trim off anything after the last '.' since that optionally contains the size
+                int imageEnd = label.toString().contains(".") ? label.toString().indexOf(".") : label.toString().length();
+                String image = label.toString().substring(0,imageEnd);
+                SlaveTemplate s = m.get(image);
                 if (s!=null)    return s;
             }
 
@@ -199,7 +215,12 @@ public class MansionCloud extends AbstractCloudImpl {
                 spec.sshd(JENKINS_USER, 15000, publicKey.trim()); // TODO: should UID be configurable?
                 final VirtualMachineRef vm;
 
-                HardwareSpec box = new HardwareSpec("small");
+                HardwareSpec box;
+                if (label != null && label.toString().contains(".")) {
+                    box = new HardwareSpec(label.toString().substring(label.toString().lastIndexOf(".") + 1));
+                } else {
+                    box = new HardwareSpec("small");
+                }
 
                 URL broker = new URL(this.broker,"/"+st.mansion+"/");
                 if (MANSION_SECRET==null) {
