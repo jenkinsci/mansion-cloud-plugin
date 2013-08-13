@@ -96,7 +96,7 @@ public class MansionCloud extends AbstractCloudImpl {
     }
 
     private void initTransient() {
-        backoffCounter = new BackOffCounter(2,360, TimeUnit.SECONDS);
+        backoffCounter = new BackOffCounter(2,MAX_BACKOFF_SECONDS, TimeUnit.SECONDS);
     }
 
     protected Object readResolve() {
