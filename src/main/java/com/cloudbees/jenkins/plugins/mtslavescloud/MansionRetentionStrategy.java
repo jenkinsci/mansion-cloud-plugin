@@ -58,7 +58,7 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
                             e.interrupt();
                         }
                         try {
-                            Jenkins.getInstance().removeNode(slave);
+                            MansionRetentionStrategy.this.kill(node);
                         } catch (IOException e) {
                             LOGGER.log(Level.SEVERE, "Error removing slave " + slave.getNodeName());
                         }
