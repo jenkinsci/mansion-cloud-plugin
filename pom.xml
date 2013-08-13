@@ -91,7 +91,7 @@
     <dependency><!-- for entering credentials from UI -->
       <groupId>com.cloudbees.jenkins.plugins</groupId>
       <artifactId>cloudbees-registration</artifactId>
-      <version>3.11-SNAPSHOT</version>
+      <version>3.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
