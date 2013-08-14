@@ -5,6 +5,7 @@ import hudson.Util;
 import net.sf.json.JSONObject;
 
 import java.net.URL;
+import java.util.List;
 
 /**
  * The most up-to-date snapshot that we carry over for one file system described in {@link SlaveTemplate}.
@@ -45,12 +46,6 @@ class FileSystemLineage {
     }
 
     public void applyTo(VirtualMachineSpec spec) {
-        for (JSONObject c : Util.filter(spec.configs, JSONObject.class)) {
-            if (c.getString("type").equals("fileSystem") && c.getString("path").equals(path)) {
-                spec.configs.remove(c);
-                spec.fs(snapshot,path);
-                return;
-            }
-        }
+        spec.fs(snapshot,path);
     }
 }
