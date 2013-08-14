@@ -5,14 +5,12 @@ import com.cloudbees.api.BeesClient;
 import com.cloudbees.api.cr.Capability;
 import com.cloudbees.api.oauth.OauthClientException;
 import com.cloudbees.api.oauth.TokenRequest;
-import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
 import com.cloudbees.jenkins.plugins.mtslavescloud.util.BackOffCounter;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey.DirectEntryPrivateKeySource;
 import com.cloudbees.mtslaves.client.BrokerRef;
 import com.cloudbees.mtslaves.client.HardwareSpec;
-import com.cloudbees.mtslaves.client.MansionRef;
 import com.cloudbees.mtslaves.client.SnapshotRef;
 import com.cloudbees.mtslaves.client.VirtualMachineConfigurationException;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
@@ -212,7 +210,6 @@ public class MansionCloud extends AbstractCloudImpl {
                         new DirectEntryPrivateKeySource(encodePrivateKey(id)),null,null);
 
                 spec.sshd(JENKINS_USER, 15000, publicKey.trim()); // TODO: should UID be configurable?
-                final VirtualMachineRef vm;
 
                 HardwareSpec box;
                 if (label != null && label.toString().contains(".")) {
@@ -222,12 +219,8 @@ public class MansionCloud extends AbstractCloudImpl {
                 }
 
                 URL broker = new URL(this.broker,"/"+st.mansion+"/");
-                if (MANSION_SECRET==null) {
-                    String oauthToken = createAccessToken(broker);
-                    vm = new BrokerRef(broker).createVirtualMachine(box, oauthToken);
-                } else {
-                    vm = new MansionRef(broker,MANSION_SECRET).createVirtualMachine(box, "unused");
-                }
+                String oauthToken = createAccessToken(broker);
+                final VirtualMachineRef vm = new BrokerRef(broker,oauthToken).createVirtualMachine(box);
 
                 LOGGER.fine("Allocated "+vm.url);
                 try {
@@ -360,12 +353,6 @@ public class MansionCloud extends AbstractCloudImpl {
      * UNIX user name to be created inside the slave to be used for build.
      */
     public static final String JENKINS_USER = "jenkins";
-
-    /**
-     * This property can be set to the secret key of the mansion to let this plugin talk directly to
-     * a mansion without going through a broker. Useful during development.
-     */
-    public static String MANSION_SECRET = System.getProperty("mansion.secret");
 
     // TODO: move to the mt-slaves-client
     public static Capability PROVISION_CAPABILITY = new Capability("https://types.cloudbees.com/broker/provision");
