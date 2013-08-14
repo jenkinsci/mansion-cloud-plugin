@@ -132,6 +132,8 @@
           <systemProperties>
             <!-- NodeProvisioner runs x100 the normal speed (which is 10000) to reduce the delay till the provisioning attempt -->
             <hudson.model.LoadStatistics.clock>1000</hudson.model.LoadStatistics.clock>
+	    <!-- use grandcentral.beescloud.com for auth -->
+	    <com.cloudbees.Domain>beescloud.com</com.cloudbees.Domain>
           </systemProperties>
         </configuration>
       </plugin>
