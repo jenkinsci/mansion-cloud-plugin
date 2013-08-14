@@ -190,18 +190,17 @@ public class MansionCloud extends AbstractCloudImpl {
 
         LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
 
-        final SlaveTemplate st = resolveToTemplate(label);
 
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
             for (int i=0; i<excessWorkload; i++) {
+                final SlaveTemplate st = resolveToTemplate(label);
                 VirtualMachineSpec spec = new VirtualMachineSpec();
                 for (MansionVmConfigurator configurator : MansionVmConfigurator.all()) {
                     configurator.configure(this,label,spec);
                 }
                 st.populate(spec);
 
-                st.loadClan().applyTo(spec);    // if we have more up-to-date snapshots, use them
 
                 // we need an SSH key pair to securely login to the allocated slave, but it does't matter what key to use.
                 // so just reuse the Jenkins instance identity for a convenience, since this key is readily available,
@@ -232,10 +231,19 @@ public class MansionCloud extends AbstractCloudImpl {
 
                 LOGGER.fine("Allocated "+vm.url);
                 try {
-                    vm.setup(spec);
+                    VirtualMachineSpec specWithSnapshots = spec.clone();
+                    FileSystemClan fileSystemClan = st.loadClan();
+                    fileSystemClan.applyTo(specWithSnapshots);    // if we have more up-to-date snapshots, use them
+                    vm.setup(specWithSnapshots);
                 } catch (VirtualMachineConfigurationException e) {
-                    //TODO: retry with another snapshot
-                    LOGGER.log(WARNING, "Failed to configure VM",e);
+                    LOGGER.log(WARNING, "Couldn't find snapshot, trying with originals",e);
+                    //TODO: we should try to figure out which snapshot to revert
+                    //TODO: instead of reverting them all
+                    try {
+                        vm.setup(spec);
+                    } catch (VirtualMachineConfigurationException e1) {
+                        LOGGER.log(SEVERE, "Failed to configure VM",e);
+                    }
                 }
 
                 Future<Node> f = Computer.threadPoolForRemoting.submit(new Callable<Node>() {
