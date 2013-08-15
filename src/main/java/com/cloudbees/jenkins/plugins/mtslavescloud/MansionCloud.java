@@ -3,6 +3,7 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 import com.cloudbees.EndPoints;
 import com.cloudbees.api.BeesClient;
 import com.cloudbees.api.cr.Capability;
+import com.cloudbees.api.cr.Credential;
 import com.cloudbees.api.oauth.OauthClientException;
 import com.cloudbees.api.oauth.TokenRequest;
 import com.cloudbees.jenkins.plugins.mtslavescloud.util.BackOffCounter;
@@ -166,7 +167,7 @@ public class MansionCloud extends AbstractCloudImpl {
         return (DescriptorImpl)super.getDescriptor();
     }
 
-    public String createAccessToken(URL broker) throws AbortException, OauthClientException {
+    public Credential createAccessToken(URL broker) throws AbortException, OauthClientException {
         CloudBeesUser u = getDescriptor().findUser();
         BeesClient bees = new BeesClient(EndPoints.runAPI(),u.getAPIKey(), Secret.toString(u.getAPISecret()), null, null);
 
@@ -177,7 +178,7 @@ public class MansionCloud extends AbstractCloudImpl {
             .withAccountName(acc.getName())
             .withScope(broker, PROVISION_CAPABILITY)
             .withGenerateRequestToken(false);
-        return bees.getOauthClient().createToken(tr).accessToken;
+        return bees.getOauthClient().createToken(tr).asCredential();
     }
 
     @Override
@@ -219,8 +220,7 @@ public class MansionCloud extends AbstractCloudImpl {
                 }
 
                 URL broker = new URL(this.broker,"/"+st.mansion+"/");
-                String oauthToken = createAccessToken(broker);
-                final VirtualMachineRef vm = new BrokerRef(broker,oauthToken).createVirtualMachine(box);
+                final VirtualMachineRef vm = new BrokerRef(broker,createAccessToken(broker)).createVirtualMachine(box);
 
                 LOGGER.fine("Allocated "+vm.url);
                 try {

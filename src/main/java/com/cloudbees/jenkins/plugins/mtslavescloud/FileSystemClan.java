@@ -1,5 +1,6 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
+import com.cloudbees.api.oauth.OauthClientException;
 import com.cloudbees.mtslaves.client.FileSystemRef;
 import com.cloudbees.mtslaves.client.SnapshotRef;
 import com.cloudbees.mtslaves.client.VirtualMachine;
@@ -24,6 +25,7 @@ import static java.util.logging.Level.WARNING;
  * @author Kohsuke Kawaguchi
  */
 public class FileSystemClan implements Iterable<FileSystemLineage> {
+    private final MansionCloud cloud;
     /**
      * A clan is a record of how this master have used a template, so it's tied to one.
      */
@@ -31,7 +33,8 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
 
     private final List<FileSystemLineage> lineages = new ArrayList<FileSystemLineage>();
 
-    FileSystemClan(SlaveTemplate template) {
+    FileSystemClan(MansionCloud cloud, SlaveTemplate template) {
+        this.cloud = cloud;
         this.template = template;
     }
 
@@ -73,6 +76,10 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
         }
     }
 
+    /**
+     * Takes snapshots of the current file systems attached to the given VM and
+     * use that as the latest generation of this clan.
+     */
     public void update(VirtualMachine vm) {
         FileSystemsProperty fsp = vm.getProperty(FileSystemsProperty.class);
         if (fsp==null)  return;
@@ -82,10 +89,12 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
             if (fs==null)   continue;   // shouldn't happen, but let's be defensive
 
             try {
-                FileSystemRef fsr = new FileSystemRef(fs,"88e7313d64af5ee654525625885be2781eb9bae0");
+                FileSystemRef fsr = new FileSystemRef(fs,cloud.createAccessToken(fs));
                 SnapshotRef snapshot = fsr.snapshot();
                 add(new FileSystemLineage(persistedPath,snapshot.url));
             } catch (IOException e) {
+                LOGGER.log(WARNING, "Failed to take snapshot of "+fs,e);
+            } catch (OauthClientException e) {
                 LOGGER.log(WARNING, "Failed to take snapshot of "+fs,e);
             }
         }

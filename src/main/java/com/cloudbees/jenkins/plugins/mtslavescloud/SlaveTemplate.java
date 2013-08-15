@@ -2,19 +2,14 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
-import hudson.XmlFile;
 import hudson.util.IOUtils;
-import jenkins.model.Jenkins;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import net.sf.json.JsonConfig;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +49,15 @@ public class SlaveTemplate {
      */
     public List<String> persistentFileSystems = new ArrayList<String>();
 
+    /**
+     * Cloud that this template belongs to.
+     */
+    private transient MansionCloud owner;
+
+    /*package*/ void postInit(MansionCloud cloud) {
+        this.owner = cloud;
+    }
+
     public void populate(VirtualMachineSpec spec) {
         JSONArray configs = this.spec.optJSONArray("configs");
         if (configs!=null) {
@@ -65,7 +69,7 @@ public class SlaveTemplate {
      * Gets the current clan of {@link FileSystemLineage}s this master has for this slave template.
      */
     public FileSystemClan loadClan() throws IOException {
-        FileSystemClan clan = new FileSystemClan(this);
+        FileSystemClan clan = new FileSystemClan(owner,this);
         clan.load();
         return clan;
     }
