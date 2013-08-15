@@ -98,7 +98,7 @@
     <dependency>
       <groupId>com.cloudbees</groupId>
       <artifactId>token-validator</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0</version>
       <exclusions>
         <exclusion>
           <groupId>com.thoughtworks.xstream</groupId>
