@@ -2,9 +2,11 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.EndPoints;
 import com.cloudbees.api.BeesClient;
+import com.cloudbees.api.TokenGenerator;
 import com.cloudbees.api.cr.Capability;
 import com.cloudbees.api.cr.Credential;
 import com.cloudbees.api.oauth.OauthClientException;
+import com.cloudbees.api.oauth.OauthToken;
 import com.cloudbees.api.oauth.TokenRequest;
 import com.cloudbees.jenkins.plugins.mtslavescloud.util.BackOffCounter;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
@@ -77,6 +79,8 @@ public class MansionCloud extends AbstractCloudImpl {
 
     private transient BackOffCounter backoffCounter;
 
+    private transient TokenGenerator tokenGenerator;
+
     /**
      * List of {@link MansionCloudProperty}s configured for this project.
      */
@@ -96,6 +100,20 @@ public class MansionCloud extends AbstractCloudImpl {
 
     private void initTransient() {
         backoffCounter = new BackOffCounter(2,MAX_BACKOFF_SECONDS, TimeUnit.SECONDS);
+
+        try {
+            CloudBeesUser u = getDescriptor().findUser();
+            BeesClient bees = new BeesClient(EndPoints.runAPI(),u.getAPIKey(), Secret.toString(u.getAPISecret()), null, null);
+            tokenGenerator = TokenGenerator.from(bees).withCache();
+        } catch (final AbortException e) {
+            // fake with the one that'll always fail
+            tokenGenerator = new TokenGenerator() {
+                @Override
+                public OauthToken createToken(TokenRequest tokenRequest) throws OauthClientException {
+                    throw new OauthClientException(e);
+                }
+            };
+        }
     }
 
     protected Object readResolve() {
@@ -169,8 +187,6 @@ public class MansionCloud extends AbstractCloudImpl {
 
     public Credential createAccessToken(URL broker) throws AbortException, OauthClientException {
         CloudBeesUser u = getDescriptor().findUser();
-        BeesClient bees = new BeesClient(EndPoints.runAPI(),u.getAPIKey(), Secret.toString(u.getAPISecret()), null, null);
-
         CloudBeesAccount acc = u.getAccount(Util.fixNull(account));
         if (acc==null)      acc = u.getAccounts().get(0); // fallback
 
@@ -178,7 +194,7 @@ public class MansionCloud extends AbstractCloudImpl {
             .withAccountName(acc.getName())
             .withScope(broker, PROVISION_CAPABILITY)
             .withGenerateRequestToken(false);
-        return bees.getOauthClient().createToken(tr).asCredential();
+        return tokenGenerator.createToken(tr).asCredential();
     }
 
     @Override
