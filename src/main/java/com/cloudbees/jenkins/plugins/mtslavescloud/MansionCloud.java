@@ -112,6 +112,11 @@ public class MansionCloud extends AbstractCloudImpl {
                 public OauthToken createToken(TokenRequest tokenRequest) throws OauthClientException {
                     throw new OauthClientException(e);
                 }
+
+                @Override
+                public OauthToken createOAuthClientToken(Collection<String> scopes) throws OauthClientException {
+                    throw new OauthClientException(e);
+                }
             };
         }
     }
@@ -164,6 +169,9 @@ public class MansionCloud extends AbstractCloudImpl {
     private SlaveTemplate resolveToTemplate(Label label) {
         try {
             Map<String,SlaveTemplate> m = SlaveTemplate.load(this.getClass().getResourceAsStream("machines.json"));
+            for (SlaveTemplate t : m.values()) {
+                t.postInit(this);
+            }
 
             if (label != null) {
                 //trim off anything after the last '.' since that optionally contains the size
