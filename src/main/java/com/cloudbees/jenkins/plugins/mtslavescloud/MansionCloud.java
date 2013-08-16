@@ -259,7 +259,7 @@ public class MansionCloud extends AbstractCloudImpl {
                     try {
                         vm.setup(spec);
                     } catch (VirtualMachineConfigurationException e2) {
-                        LOGGER.log(SEVERE, "Failed to configure VM",e2);
+                        LOGGER.log(SEVERE, "Failed to configure VM", e2);
                     }
                 }
 
