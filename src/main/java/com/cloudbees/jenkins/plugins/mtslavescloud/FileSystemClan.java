@@ -34,6 +34,7 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
     private final List<FileSystemLineage> lineages = new ArrayList<FileSystemLineage>();
 
     FileSystemClan(MansionCloud cloud, SlaveTemplate template) {
+        if (cloud==null)    throw new IllegalArgumentException();
         this.cloud = cloud;
         this.template = template;
     }
