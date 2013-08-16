@@ -58,7 +58,7 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
                             e.interrupt();
                         }
                         try {
-                            MansionRetentionStrategy.this.kill(node);
+                            MansionRetentionStrategy.super.kill(node);
                         } catch (IOException e) {
                             LOGGER.log(Level.SEVERE, "Error removing slave " + slave.getNodeName());
                         }
