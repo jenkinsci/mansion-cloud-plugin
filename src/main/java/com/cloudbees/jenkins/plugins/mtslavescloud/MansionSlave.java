@@ -33,7 +33,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
     public MansionSlave(VirtualMachineRef vm, SlaveTemplate template, Label label, ComputerLauncher launcher) throws FormException, IOException {
         super(
-                Util.getDigestOf(vm.getId()).substring(0,8),
+                massageId(vm),
                 "Virtual machine provisioned from "+vm.url,
                 "/scratch/jenkins", // TODO:
                 1,
@@ -47,6 +47,21 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
         // suspend retention strategy until we do the initial launch
         this.holdOffLaunchUntilSave = true;
+    }
+
+
+    /**
+     * Compute ID from {@link VirtualMachineRef#getId()}.
+     *
+     * If we can, we'd like to use the ID as-is to assist diagnostics, but if it contains
+     * a problematic character or too long, compute our own ID.
+     */
+    private static String massageId(VirtualMachineRef vm) {
+        String id = vm.getId();
+        if (id.contains("/") || id.length()>8)
+            return Util.getDigestOf(id).substring(0,8);
+        else
+            return id;
     }
 
     protected void cancelHoldOff() {
