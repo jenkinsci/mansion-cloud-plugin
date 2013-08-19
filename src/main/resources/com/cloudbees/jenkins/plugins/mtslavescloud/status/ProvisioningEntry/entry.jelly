@@ -1,0 +1,16 @@
+<?jelly escape-by-default='true'?>
+<!--
+  ~ Copyright © 2012 CloudBees, Inc.
+  ~ This is proprietary code. All rights reserved.
+  -->
+
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler">
+  <tr class="build-row no-wrap">
+    <td class="pane">
+      ${it.numInProgress}
+    </td>
+    <td class="pane right-align">
+      How are you
+    </td>
+  </tr>
+</j:jelly>

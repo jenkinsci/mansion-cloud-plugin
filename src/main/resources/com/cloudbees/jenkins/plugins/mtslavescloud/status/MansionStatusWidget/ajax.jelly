@@ -1,0 +1,22 @@
+<?jelly escape-by-default='true'?>
+<!--
+  ~ Copyright © 2012 CloudBees, Inc.
+  ~ This is proprietary code. All rights reserved.
+  -->
+
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
+  <l:ajax>
+    <l:pane width="2" title="&lt;img src='${resURL}/plugin/mt-slaves-cloud-plugin/images/cloudbees.png' width='42px' height='16px' alt=''/&gt; &lt;a href='${it.remoteUrl}'&gt;Provisioning Status&lt;/a&gt;"
+            id="mansion-widget">
+      <j:forEach var="status" items="${it.entries}">
+       <tr class="build-row no-wrap">
+          <td class="pane" colspan="2">
+            <b>${status.cloud.broker}</b>
+          </td>
+          <st:include page="entry.jelly" it="${status}"/>
+
+        </tr>
+      </j:forEach>
+    </l:pane>
+  </l:ajax>
+</j:jelly>

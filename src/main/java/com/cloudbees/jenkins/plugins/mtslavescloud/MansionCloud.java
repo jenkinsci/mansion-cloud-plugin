@@ -56,6 +56,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -88,6 +89,17 @@ public class MansionCloud extends AbstractCloudImpl {
     private volatile DescribableList<MansionCloudProperty,MansionCloudPropertyDescriptor> properties
             = new DescribableList<MansionCloudProperty,MansionCloudPropertyDescriptor>(Jenkins.getInstance());
 
+    /**
+     * Why did the last slave provisioning fail?
+     */
+    private transient Exception lastException;
+
+    /**
+     * The number of slaves we are currently provisioning
+     * or trying to connect to.
+     */
+    private transient AtomicInteger provisioningsInProcess = new AtomicInteger(0);
+
     @DataBoundConstructor
     public MansionCloud(URL broker, String account, List<MansionCloudProperty> properties) throws IOException {
         super("mansion"+ Util.getDigestOf(broker.toExternalForm()).substring(0,8), "0"/*unused*/);
@@ -100,6 +112,7 @@ public class MansionCloud extends AbstractCloudImpl {
 
     private void initTransient() {
         backoffCounter = new BackOffCounter(2,MAX_BACKOFF_SECONDS, TimeUnit.SECONDS);
+        provisioningsInProcess = new AtomicInteger(0);
 
         try {
             CloudBeesUser u = getDescriptor().findUser();
@@ -259,7 +272,8 @@ public class MansionCloud extends AbstractCloudImpl {
                     try {
                         vm.setup(spec);
                     } catch (VirtualMachineConfigurationException e2) {
-                        LOGGER.log(SEVERE, "Failed to configure VM", e2);
+                        handleException("Failed to configure VM", e2);
+                        break;
                     }
                 }
 
@@ -272,7 +286,7 @@ public class MansionCloud extends AbstractCloudImpl {
                                 // Linux slaves can run without it, but OS X slaves need java.awt.headless=true
                                 sshd.getHost(), sshd.getPort(), sshCred, "-Djava.awt.headless=true", null, null, null);
                         MansionSlave s = new MansionSlave(vm,st,label,launcher);
-
+                        IOException lastConnectionException = null;
                         try {
                             // connect before we declare victory
                             // If we declare
@@ -293,6 +307,8 @@ public class MansionCloud extends AbstractCloudImpl {
                                 } catch (ExecutionException e) {
                                     if (! (e.getCause() instanceof IOException))
                                         throw e;
+                                    else
+                                        lastConnectionException = (IOException) e.getCause();
                                 }
                             }
                         } finally {
@@ -300,11 +316,11 @@ public class MansionCloud extends AbstractCloudImpl {
                         }
                         if (s.toComputer().isOffline()) {
                             // if we can't connect, backoff before the next try
-                            MansionCloud.this.backoffCounter.recordError();
-                            LOGGER.log(Level.WARNING,"Failed to connect to slave over ssh, will try again in {0} seconds", backoffCounter.getBackOff());
+                            handleException("Failed to connect to slave over ssh", lastConnectionException);
                         } else {
                             // success!
                             MansionCloud.this.backoffCounter.clear();
+                            provisioningsInProcess.decrementAndGet();
                         }
                         return s;
                     }
@@ -312,15 +328,40 @@ public class MansionCloud extends AbstractCloudImpl {
                 r.add(new PlannedNode(vm.getId(),f,1));
             }
         } catch (IOException e) {
-            backoffCounter.recordError();
-            LOGGER.log(WARNING, "Failed to provision from "+this,e);
-            LOGGER.log(WARNING,"Will try again in {0} seconds.", backoffCounter.getBackOff());
+            handleException("Failed to provision from " + this, e);
         } catch (InterruptedException e) {
             LOGGER.log(WARNING, "Failed to provision from " + this, e);
         } catch (OauthClientException e) {
-            LOGGER.log(WARNING, "Failed to provision from " + this, e);
+            handleException("Authentication error from " + this, e);
         }
         return r;
+    }
+
+    /**
+     * Handle errors which should cause a backoff and
+     * be displayed to users.
+     *
+     * @param msg Message for the log
+     * @param e Exception to display to the user
+     */
+    private void handleException(String msg, Exception e) {
+        backoffCounter.recordError();
+        provisioningsInProcess.decrementAndGet();
+        this.lastException = e;
+        LOGGER.log(WARNING, msg,e);
+        LOGGER.log(WARNING,"Will try again in {0} seconds.", backoffCounter.getBackOff());
+    }
+
+    public Exception getLastException() {
+        return lastException;
+    }
+
+    public BackOffCounter getBackOffCounter() {
+        return backoffCounter;
+    }
+
+    public int getProvisioningsInProgress() {
+        return provisioningsInProcess.get();
     }
 
     // TODO: move this to instance-identity-module
