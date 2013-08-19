@@ -6,7 +6,6 @@ import com.cloudbees.api.TokenGenerator;
 import com.cloudbees.api.cr.Capability;
 import com.cloudbees.api.cr.Credential;
 import com.cloudbees.api.oauth.OauthClientException;
-import com.cloudbees.api.oauth.OauthToken;
 import com.cloudbees.api.oauth.TokenRequest;
 import com.cloudbees.jenkins.plugins.mtslavescloud.util.BackOffCounter;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
@@ -14,7 +13,6 @@ import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey.DirectEntryPrivateKeySource;
 import com.cloudbees.mtslaves.client.BrokerRef;
 import com.cloudbees.mtslaves.client.HardwareSpec;
-import com.cloudbees.mtslaves.client.SnapshotRef;
 import com.cloudbees.mtslaves.client.VirtualMachineConfigurationException;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
@@ -76,11 +74,27 @@ public class MansionCloud extends AbstractCloudImpl {
      */
     private String account;
 
-    public SnapshotRef lastSnapshot = null;
-
     private transient BackOffCounter backoffCounter;
 
-    private transient TokenGenerator tokenGenerator;
+    /**
+     * So long as {@link CloudBeesUser} doesn't change, we'll reuse the same {@link TokenGenerator}
+     */
+    private transient volatile Cache tokenGenerator;
+
+    class Cache {
+        private final TokenGenerator tokenGenerator;
+        private final CloudBeesUser user;
+
+        Cache(CloudBeesUser u) {
+            this.user = u;
+            BeesClient bees = new BeesClient(EndPoints.runAPI(),u.getAPIKey(), Secret.toString(u.getAPISecret()), null, null);
+            tokenGenerator = TokenGenerator.from(bees).withCache();
+        }
+
+        Credential obtain(TokenRequest tr) throws OauthClientException {
+            return tokenGenerator.createToken(tr).asCredential();
+        }
+    }
 
     /**
      * List of {@link MansionCloudProperty}s configured for this project.
@@ -113,25 +127,6 @@ public class MansionCloud extends AbstractCloudImpl {
     private void initTransient() {
         backoffCounter = new BackOffCounter(2,MAX_BACKOFF_SECONDS, TimeUnit.SECONDS);
         provisioningsInProcess = new AtomicInteger(0);
-
-        try {
-            CloudBeesUser u = getDescriptor().findUser();
-            BeesClient bees = new BeesClient(EndPoints.runAPI(),u.getAPIKey(), Secret.toString(u.getAPISecret()), null, null);
-            tokenGenerator = TokenGenerator.from(bees).withCache();
-        } catch (final AbortException e) {
-            // fake with the one that'll always fail
-            tokenGenerator = new TokenGenerator() {
-                @Override
-                public OauthToken createToken(TokenRequest tokenRequest) throws OauthClientException {
-                    throw new OauthClientException(e);
-                }
-
-                @Override
-                public OauthToken createOAuthClientToken(Collection<String> scopes) throws OauthClientException {
-                    throw new OauthClientException(e);
-                }
-            };
-        }
     }
 
     protected Object readResolve() {
@@ -215,7 +210,10 @@ public class MansionCloud extends AbstractCloudImpl {
             .withAccountName(acc.getName())
             .withScope(broker, PROVISION_CAPABILITY)
             .withGenerateRequestToken(false);
-        return tokenGenerator.createToken(tr).asCredential();
+
+        if (tokenGenerator==null || tokenGenerator.user!=u)
+            tokenGenerator = new Cache(u);
+        return tokenGenerator.obtain(tr);
     }
 
     @Override
