@@ -38,4 +38,12 @@ public class PlannedMansionSlaveSet implements Iterable<PlannedMansionSlave> {
     /*package*/ void onStarted(PlannedMansionSlave p) {
         this.data.add(p);
     }
+
+    public PlannedMansionSlave getDynamic(String id) {
+        for (PlannedMansionSlave s : data) {
+            if (s.displayName.equals(id))
+                return s;
+        }
+        return null;
+    }
 }

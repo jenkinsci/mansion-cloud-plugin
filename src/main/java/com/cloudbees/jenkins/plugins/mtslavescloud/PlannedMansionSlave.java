@@ -11,7 +11,6 @@ import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.SshdEndpointProperty;
 import com.trilead.ssh2.signature.RSAPublicKey;
 import com.trilead.ssh2.signature.RSASHA1Verify;
-import hudson.Main;
 import hudson.model.Computer;
 import hudson.model.Label;
 import hudson.model.Node;
@@ -90,6 +89,13 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
         status = "Allocated "+displayName;
         // start allocation
         promise().setBase(Computer.threadPoolForRemoting.submit(this));
+    }
+
+    /**
+     * Returns the path this this object in the URL space relative to the context path
+     */
+    public String getUrl() {
+        return "cloud/"+cloud.name+"/inProgressSet/"+displayName;
     }
 
     /**
