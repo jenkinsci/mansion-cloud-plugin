@@ -1,12 +1,10 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud.MansionCloud
 
-import com.cloudbees.jenkins.plugins.mtslavescloud.MansionCloud
-import com.cloudbees.jenkins.plugins.mtslavescloud.MansionCloudPropertyDescriptor
 import com.cloudbees.jenkins.plugins.mtslavescloud.PlannedMansionSlave
 import hudson.Functions
 
 import static hudson.Util.getPastTimeString
-import static hudson.Util.getTimeSpanString;
+import static hudson.Util.getTimeSpanString
 
 def f = namespace(lib.FormTagLib)
 def l = namespace(lib.LayoutTagLib)
@@ -45,16 +43,3 @@ l.layout {
         }
     }
 }
-
-
-f.entry(field:"broker",title:_("Broker URL")) {
-    f.textbox()
-}
-
-if (!MansionCloud.isInDevAtCloud()) {// in DEV@cloud, the implicit user credential only has one account
-    f.entry(field:"account",title:_("Account")) {
-        f.select()
-    }
-}
-
-f.descriptorList(field:"properties",  title:_("Properties"), descriptors:MansionCloudPropertyDescriptor.all())
