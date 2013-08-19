@@ -61,12 +61,14 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
         return launchedTime;
     }
 
-    // TODO: post 1.510, move this logic to onRemoved()
     @Override
     protected void kill() {
         try {
             super.kill();
-            slave.terminate();
+
+            // hack to avoid infinite recursion
+            // TODO: post 1.510, move this logic to onRemoved() and no need to call protected internal methods
+            slave._terminate(TaskListener.NULL);
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Failed to terminate "+getDisplayName());
         } catch (InterruptedException e) {
