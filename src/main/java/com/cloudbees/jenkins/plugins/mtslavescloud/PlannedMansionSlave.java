@@ -230,7 +230,6 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
 
     @Override
     public void spent() {
-        status = "Failed to provision "+displayName;
         spent = System.currentTimeMillis();
 
         // how did the provisioning go?
@@ -246,8 +245,12 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
             problem = e;
         }
 
-        if (problem!=null)
+        if (problem!=null) {
+            status = "Failed";
             cloud.getBackOffCounter().recordError();
+        } else {
+            status = "Completed";
+        }
 
         cloud.getInProgressSet().update();
     }
