@@ -24,10 +24,13 @@ import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.Cloud;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.DescribableList;
+import hudson.util.HttpResponses;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.HttpResponse;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import java.io.IOException;
 import java.net.URL;
@@ -263,8 +266,14 @@ public class MansionCloud extends AbstractCloudImpl {
         return backoffCounter;
     }
 
-    public static MansionCloud get() {
-        return Jenkins.getInstance().clouds.get(MansionCloud.class);
+    /**
+     * Clear the back off window now.
+     */
+    @RequirePOST
+    public HttpResponse doRetryNow() {
+        checkPermission(Jenkins.ADMINISTER);
+        getBackOffCounter().clear();
+        return HttpResponses.forwardToPreviousPage();
     }
 
     @Extension
