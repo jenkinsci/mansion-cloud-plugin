@@ -165,6 +165,9 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
             }
         }
 
+        if (INJECT_FAULT)
+            throw new IllegalStateException("Injected failure");
+
         status = "Booting";
         vm.bootSync();
         LOGGER.fine("Booted " + vm.url);
@@ -266,7 +269,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      */
     protected boolean isNoteWorthy() {
         if (spent==0)     return true;    // in progress
-        if (problem!=null && spent+PROBLEM_RETENTION_SPAN <System.currentTimeMillis() )
+        if (problem!=null && System.currentTimeMillis() < spent+PROBLEM_RETENTION_SPAN )
             return true;    // recent enough failure
         return false;
     }
@@ -292,4 +295,9 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      * In case of a failure, how long do we retain it, in milliseconds? Default is 4 hours.
      */
     public static long PROBLEM_RETENTION_SPAN = Long.getLong(PlannedMansionSlave.class.getName()+".problemRetention", TimeUnit2.HOURS.toMillis(4));
+
+    /**
+     * Debug switch to inject a fault in slave allocation to test error handling.
+     */
+    public static boolean INJECT_FAULT = false;
 }

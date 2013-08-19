@@ -8,6 +8,12 @@ tr(class:"no-wrap") {
         a(href: my.shouldHyperlinkSlave()?my.vm.url:null, my.displayName)
     }
     td(class:"pane") {
-        a(href: my.problem!=null?"${rootURL}/${my.url}/problem":null, my.status)
+        if (my.problem==null)
+            text(my.status)
+        else {
+            div(class:"error") {
+                a(href: "${rootURL}/${my.url}/problem", my.status)
+            }
+        }
     }
 }
