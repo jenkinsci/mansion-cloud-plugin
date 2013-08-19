@@ -37,5 +37,13 @@
             ]
         },
         "persistentFileSystems" : ["/scratch/jenkins"]
+    },
+    {
+        "id" : "bogus",
+        "displayName" : "Bogus Type to induce an error",
+        "mansion": "bogus",
+        "spec" : {
+            "configs" : []
+        }
     }
 ]}

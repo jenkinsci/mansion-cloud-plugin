@@ -37,7 +37,7 @@ l.layout {
 
         div(style:"padding-top:2em","The rest of the page shows recent problems")
 
-        showProblem("Cloud Problem",0,my.lastException)
+        showProblem("Broker Problem",0,my.lastException)
         my.inProgressSet.each { PlannedMansionSlave s ->
             showProblem("Slave ${s.vm.url} Problem", s.problemTimestamp, s.problem)
         }

@@ -125,6 +125,13 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
     }
 
     /**
+     * Gets the type of the mansion
+     */
+    public String getMansionType() {
+        return st.mansion;
+    }
+
+    /**
      * This method synchronously acquires and sets up the slave.
      *
      * When this method returns we have a connected slave.
