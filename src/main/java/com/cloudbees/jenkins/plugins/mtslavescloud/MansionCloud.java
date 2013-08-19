@@ -8,29 +8,18 @@ import com.cloudbees.api.cr.Credential;
 import com.cloudbees.api.oauth.OauthClientException;
 import com.cloudbees.api.oauth.TokenRequest;
 import com.cloudbees.jenkins.plugins.mtslavescloud.util.BackOffCounter;
-import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
-import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
-import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey.DirectEntryPrivateKeySource;
 import com.cloudbees.mtslaves.client.BrokerRef;
 import com.cloudbees.mtslaves.client.HardwareSpec;
-import com.cloudbees.mtslaves.client.VirtualMachineConfigurationException;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
-import com.cloudbees.mtslaves.client.VirtualMachineSpec;
-import com.cloudbees.mtslaves.client.properties.SshdEndpointProperty;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.cloudbees.CloudBeesAccount;
 import com.cloudbees.plugins.credentials.cloudbees.CloudBeesUser;
-import com.trilead.ssh2.signature.RSAPublicKey;
-import com.trilead.ssh2.signature.RSASHA1Verify;
 import hudson.AbortException;
 import hudson.CopyOnWrite;
 import hudson.Extension;
 import hudson.Util;
-import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Label;
-import hudson.model.Node;
-import hudson.plugins.sshslaves.SSHLauncher;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.Cloud;
 import hudson.slaves.NodeProvisioner.PlannedNode;
@@ -38,24 +27,16 @@ import hudson.util.DescribableList;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
-import org.bouncycastle.openssl.PEMWriter;
-import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.*;
@@ -74,13 +55,24 @@ public class MansionCloud extends AbstractCloudImpl {
      */
     private String account;
 
-    private transient BackOffCounter backoffCounter;
+    private transient /*almost final*/ BackOffCounter backoffCounter;
 
     /**
      * So long as {@link CloudBeesUser} doesn't change, we'll reuse the same {@link TokenGenerator}
      */
     private transient volatile Cache tokenGenerator;
 
+    /**
+     * Keeps track of noteworthy slave allocations.
+     *
+     * This is the basis for the management UI. This includes all the in-progress allocations that haven't
+     * completed, as well as failures that we want to keep around.
+     */
+    private transient /*almost final*/ PlannedMansionSlaveSet inProgressSet;
+
+    /**
+     * Caches {@link TokenGenerator} by keying it off from {@link CloudBeesUser} that provides its credential.
+     */
     class Cache {
         private final TokenGenerator tokenGenerator;
         private final CloudBeesUser user;
@@ -104,19 +96,13 @@ public class MansionCloud extends AbstractCloudImpl {
             = new DescribableList<MansionCloudProperty,MansionCloudPropertyDescriptor>(Jenkins.getInstance());
 
     /**
-     * Why did the last slave provisioning fail?
+     * Last known failure during provisioning.
      */
     private transient Exception lastException;
 
-    /**
-     * The number of slaves we are currently provisioning
-     * or trying to connect to.
-     */
-    private transient AtomicInteger provisioningsInProcess = new AtomicInteger(0);
-
     @DataBoundConstructor
     public MansionCloud(URL broker, String account, List<MansionCloudProperty> properties) throws IOException {
-        super("mansion"+ Util.getDigestOf(broker.toExternalForm()).substring(0,8), "0"/*unused*/);
+        super("mansion" + Util.getDigestOf(broker.toExternalForm()).substring(0, 8), "0"/*unused*/);
         this.broker = broker;
         this.account = account;
         if (properties!=null)
@@ -125,8 +111,8 @@ public class MansionCloud extends AbstractCloudImpl {
     }
 
     private void initTransient() {
-        backoffCounter = new BackOffCounter(2,MAX_BACKOFF_SECONDS, TimeUnit.SECONDS);
-        provisioningsInProcess = new AtomicInteger(0);
+        backoffCounter = new BackOffCounter(2, MAX_BACKOFF_SECONDS, TimeUnit.SECONDS);
+        inProgressSet = new PlannedMansionSlaveSet();
     }
 
     protected Object readResolve() {
@@ -136,6 +122,10 @@ public class MansionCloud extends AbstractCloudImpl {
 
     public DescribableList<MansionCloudProperty, MansionCloudPropertyDescriptor> getProperties() {
         return properties;
+    }
+
+    public PlannedMansionSlaveSet getInProgressSet() {
+        return inProgressSet;
     }
 
     /**
@@ -218,7 +208,7 @@ public class MansionCloud extends AbstractCloudImpl {
 
     @Override
     public Collection<PlannedNode> provision(final Label label, int excessWorkload) {
-        if (backoffCounter.shouldBackOff()) {
+        if (backoffCounter.isBackOffInEffect()) {
             return Collections.emptyList();
         }
 
@@ -229,23 +219,6 @@ public class MansionCloud extends AbstractCloudImpl {
         try {
             for (int i=0; i<excessWorkload; i++) {
                 final SlaveTemplate st = resolveToTemplate(label);
-                VirtualMachineSpec spec = new VirtualMachineSpec();
-                for (MansionVmConfigurator configurator : MansionVmConfigurator.all()) {
-                    configurator.configure(this,label,spec);
-                }
-                st.populate(spec);
-
-
-                // we need an SSH key pair to securely login to the allocated slave, but it does't matter what key to use.
-                // so just reuse the Jenkins instance identity for a convenience, since this key is readily available,
-                // and its private key is hidden to the master.
-                InstanceIdentity id = InstanceIdentity.get();
-                String publicKey = encodePublicKey(id);
-
-                final SSHUserPrivateKey sshCred = new BasicSSHUserPrivateKey(null,null, JENKINS_USER,
-                        new DirectEntryPrivateKeySource(encodePrivateKey(id)),null,null);
-
-                spec.sshd(JENKINS_USER, 15000, publicKey.trim()); // TODO: should UID be configurable?
 
                 HardwareSpec box;
                 if (label != null && label.toString().contains(".")) {
@@ -256,79 +229,12 @@ public class MansionCloud extends AbstractCloudImpl {
 
                 URL broker = new URL(this.broker,"/"+st.mansion+"/");
                 final VirtualMachineRef vm = new BrokerRef(broker,createAccessToken(broker)).createVirtualMachine(box);
-
                 LOGGER.fine("Allocated "+vm.url);
-                try {
-                    VirtualMachineSpec specWithSnapshots = spec.clone();
-                    FileSystemClan fileSystemClan = st.loadClan();
-                    fileSystemClan.applyTo(specWithSnapshots);    // if we have more up-to-date snapshots, use them
-                    vm.setup(specWithSnapshots);
-                } catch (VirtualMachineConfigurationException e) {
-                    LOGGER.log(WARNING, "Couldn't find snapshot, trying with originals",e);
-                    //TODO: we should try to figure out which snapshot to revert
-                    //TODO: instead of reverting them all
-                    try {
-                        vm.setup(spec);
-                    } catch (VirtualMachineConfigurationException e2) {
-                        handleException("Failed to configure VM", e2);
-                        break;
-                    }
-                }
 
-                Future<Node> f = Computer.threadPoolForRemoting.submit(new Callable<Node>() {
-                    public Node call() throws Exception {
-                        vm.bootSync();
-                        LOGGER.fine("Booted " + vm.url);
-                        SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
-                        SSHLauncher launcher = new SSHLauncher(
-                                // Linux slaves can run without it, but OS X slaves need java.awt.headless=true
-                                sshd.getHost(), sshd.getPort(), sshCred, "-Djava.awt.headless=true", null, null, null);
-                        MansionSlave s = new MansionSlave(vm,st,label,launcher);
-                        IOException lastConnectionException = null;
-                        try {
-                            // connect before we declare victory
-                            // If we declare
-                            // the provisioning complete by returning without the connect
-                            // operation, NodeProvisioner may decide that it still wants
-                            // one more instance, because it sees that (1) all the slaves
-                            // are offline (because it's still being launched) and
-                            // (2) there's no capacity provisioned yet.
-                            //
-                            // deferring the completion of provisioning until the launch
-                            // goes successful prevents this problem.
-                            Jenkins.getInstance().addNode(s);
-                            for (int tries = 0; tries < 10; tries ++) {
-                                Thread.sleep(500);
-                                try {
-                                    s.toComputer().connect(false).get();
-                                    break;
-                                } catch (ExecutionException e) {
-                                    if (! (e.getCause() instanceof IOException))
-                                        throw e;
-                                    else
-                                        lastConnectionException = (IOException) e.getCause();
-                                }
-                            }
-                        } finally {
-                            s.cancelHoldOff();
-                        }
-                        if (s.toComputer().isOffline()) {
-                            // if we can't connect, backoff before the next try
-                            handleException("Failed to connect to slave over ssh", lastConnectionException);
-                        } else {
-                            // success!
-                            MansionCloud.this.backoffCounter.clear();
-                            provisioningsInProcess.decrementAndGet();
-                        }
-                        return s;
-                    }
-                });
-                r.add(new PlannedNode(vm.getId(),f,1));
+                r.add(new PlannedMansionSlave(label, st, vm));
             }
         } catch (IOException e) {
             handleException("Failed to provision from " + this, e);
-        } catch (InterruptedException e) {
-            LOGGER.log(WARNING, "Failed to provision from " + this, e);
         } catch (OauthClientException e) {
             handleException("Authentication error from " + this, e);
         }
@@ -342,12 +248,11 @@ public class MansionCloud extends AbstractCloudImpl {
      * @param msg Message for the log
      * @param e Exception to display to the user
      */
-    private void handleException(String msg, Exception e) {
-        backoffCounter.recordError();
-        provisioningsInProcess.decrementAndGet();
-        this.lastException = e;
+    private <T extends Exception> T handleException(String msg, T e) {
         LOGGER.log(WARNING, msg,e);
-        LOGGER.log(WARNING,"Will try again in {0} seconds.", backoffCounter.getBackOff());
+        this.lastException = e;
+        backoffCounter.recordError();
+        return e;
     }
 
     public Exception getLastException() {
@@ -356,29 +261,6 @@ public class MansionCloud extends AbstractCloudImpl {
 
     public BackOffCounter getBackOffCounter() {
         return backoffCounter;
-    }
-
-    public int getProvisioningsInProgress() {
-        return provisioningsInProcess.get();
-    }
-
-    // TODO: move this to instance-identity-module
-    private String encodePrivateKey(InstanceIdentity id) {
-        try {
-            StringWriter sw = new StringWriter();
-            PEMWriter pem = new PEMWriter(sw);
-            pem.writeObject(id.getPrivate());
-            pem.close();
-            return sw.toString();
-        } catch (IOException e) {
-            throw new Error(e);
-        }
-    }
-
-    // TODO: move this to instance-identity module
-    private String encodePublicKey(InstanceIdentity id) throws IOException {
-        java.security.interfaces.RSAPublicKey key = id.getPublic();
-        return "ssh-rsa " + hudson.remoting.Base64.encode(RSASHA1Verify.encodeSSHRSAPublicKey(new RSAPublicKey(key.getPublicExponent(),key.getModulus())));
     }
 
     public static MansionCloud get() {
@@ -411,11 +293,6 @@ public class MansionCloud extends AbstractCloudImpl {
     }
 
     private static final Logger LOGGER = Logger.getLogger(MansionCloud.class.getName());
-
-    /**
-     * UNIX user name to be created inside the slave to be used for build.
-     */
-    public static final String JENKINS_USER = "jenkins";
 
     // TODO: move to the mt-slaves-client
     public static Capability PROVISION_CAPABILITY = new Capability("https://types.cloudbees.com/broker/provision");

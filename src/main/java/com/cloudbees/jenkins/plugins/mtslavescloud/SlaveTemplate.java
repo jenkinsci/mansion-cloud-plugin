@@ -58,6 +58,10 @@ public class SlaveTemplate {
         this.owner = cloud;
     }
 
+    public MansionCloud getOwner() {
+        return owner;
+    }
+
     public void populate(VirtualMachineSpec spec) {
         JSONArray configs = this.spec.optJSONArray("configs");
         if (configs!=null) {
