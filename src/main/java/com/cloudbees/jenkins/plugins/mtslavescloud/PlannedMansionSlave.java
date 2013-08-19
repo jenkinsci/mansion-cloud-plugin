@@ -1,5 +1,6 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
+import com.cloudbees.hudson.plugins.Config;
 import com.cloudbees.jenkins.plugins.mtslavescloud.util.PromisedFuture;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
@@ -10,6 +11,7 @@ import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.SshdEndpointProperty;
 import com.trilead.ssh2.signature.RSAPublicKey;
 import com.trilead.ssh2.signature.RSASHA1Verify;
+import hudson.Main;
 import hudson.model.Computer;
 import hudson.model.Label;
 import hudson.model.Node;
@@ -18,6 +20,7 @@ import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.IOException2;
 import hudson.util.TimeUnit2;
 import jenkins.model.Jenkins;
+import org.acegisecurity.GrantedAuthority;
 import org.bouncycastle.openssl.PEMWriter;
 import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
 
@@ -69,6 +72,11 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      */
     private volatile Throwable problem;
 
+    /**
+     * One line status of what we are doing.
+     */
+    private String status; // TODO: change to Localizable for i18n
+
 
     public PlannedMansionSlave(Label label, SlaveTemplate template, VirtualMachineRef vm) {
         super(vm.getId(), new PromisedFuture<Node>(), 1);
@@ -79,6 +87,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
 
         cloud.getInProgressSet().onStarted(this);
 
+        status = "Allocated "+displayName;
         // start allocation
         promise().setBase(Computer.threadPoolForRemoting.submit(this));
     }
@@ -105,12 +114,18 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
         return vm;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
     /**
      * This method synchronously acquires and sets up the slave.
      *
      * When this method returns we have a connected slave.
      */
     public Node call() throws Exception {
+        status = "Configuring";
+
         final VirtualMachineSpec spec = new VirtualMachineSpec();
         for (MansionVmConfigurator configurator : MansionVmConfigurator.all()) {
             configurator.configure(cloud,label,spec);
@@ -144,8 +159,11 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
             }
         }
 
+        status = "Booting";
         vm.bootSync();
         LOGGER.fine("Booted " + vm.url);
+
+        status = "Connecting";
         SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
         SSHLauncher launcher = new SSHLauncher(
                 // Linux slaves can run without it, but OS X slaves need java.awt.headless=true
@@ -164,7 +182,9 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
             // deferring the completion of provisioning until the launch
             // goes successful prevents this problem.
             Jenkins.getInstance().addNode(s);
-            for (int tries = 0; tries < 10; tries ++) {
+            for (int tries = 1; tries <= 10; tries ++) {
+                if (tries>1)
+                    status = "Connecting #"+tries;
                 Thread.sleep(500);
                 try {
                     s.toComputer().connect(false).get();
@@ -185,7 +205,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
             throw new IOException2("Failed to connect to slave over ssh", lastConnectionException);
         }
 
-        // success!
+        status = "Online";
         return s;
     }
 
@@ -210,6 +230,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
 
     @Override
     public void spent() {
+        status = "Failed to provision "+displayName;
         spent = System.currentTimeMillis();
 
         // how did the provisioning go?
@@ -239,6 +260,16 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
         if (problem!=null && spent+PROBLEM_RETENTION_SPAN <System.currentTimeMillis() )
             return true;    // recent enough failure
         return false;
+    }
+
+    /**
+     * Should we hyperlink to the cloud slave URL?
+     */
+    public boolean shouldHyperlinkSlave() {
+        for (GrantedAuthority a : Jenkins.getAuthentication().getAuthorities())
+            if (a.getAuthority().equals("cloudbees-admin"))
+                return true;
+        return Config.isDevMode();
     }
 
     /**

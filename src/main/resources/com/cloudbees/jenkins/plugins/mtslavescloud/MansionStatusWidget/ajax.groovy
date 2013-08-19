@@ -8,7 +8,7 @@ import jenkins.model.Jenkins;
 def l = namespace(lib.LayoutTagLib);
 
 def row(style,body) {
-    tr(class:"no-wrap") {
+    tr {
         td(class:"pane",colspan:2,style:style) {
             body()
         }
@@ -52,8 +52,8 @@ l.ajax {
             }
 
             if (!shownSomething) {
-                row("color:#bbb") {
-                    text("(idle)")
+                row("color:#888") {
+                    div(align:"center", "idle")
                 }
             }
         }
