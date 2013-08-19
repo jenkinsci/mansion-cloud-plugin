@@ -256,7 +256,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
 
         if (problem!=null) {
             status = "Failed";
-            cloud.getBackOffCounter().recordError();
+            cloud.getBackOffCounter(st).recordError();
         } else {
             status = "Completed";
         }

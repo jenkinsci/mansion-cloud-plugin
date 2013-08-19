@@ -30,6 +30,7 @@ import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.HttpResponse;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import java.io.IOException;
@@ -39,6 +40,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -58,7 +61,10 @@ public class MansionCloud extends AbstractCloudImpl {
      */
     private String account;
 
-    private transient /*almost final*/ BackOffCounter backoffCounter;
+    /**
+     * Which broker is working and which one is not?
+     */
+    private transient /*almost final*/ ConcurrentMap<String/*broker ID*/,BackOffCounter> backoffCounters;
 
     /**
      * So long as {@link CloudBeesUser} doesn't change, we'll reuse the same {@link TokenGenerator}
@@ -114,7 +120,7 @@ public class MansionCloud extends AbstractCloudImpl {
     }
 
     private void initTransient() {
-        backoffCounter = new BackOffCounter(2, MAX_BACKOFF_SECONDS, TimeUnit.SECONDS);
+        backoffCounters = new ConcurrentHashMap<String, BackOffCounter>();
         inProgressSet = new PlannedMansionSlaveSet();
     }
 
@@ -211,17 +217,15 @@ public class MansionCloud extends AbstractCloudImpl {
 
     @Override
     public Collection<PlannedNode> provision(final Label label, int excessWorkload) {
-        if (backoffCounter.isBackOffInEffect()) {
-            return Collections.emptyList();
-        }
-
         LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
 
+        SlaveTemplate st = resolveToTemplate(label);
+        if (getBackOffCounter(st).isBackOffInEffect())
+            return Collections.emptyList();
 
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
             for (int i=0; i<excessWorkload; i++) {
-                final SlaveTemplate st = resolveToTemplate(label);
 
                 HardwareSpec box;
                 if (label != null && label.toString().contains(".")) {
@@ -237,9 +241,9 @@ public class MansionCloud extends AbstractCloudImpl {
                 r.add(new PlannedMansionSlave(label, st, vm));
             }
         } catch (IOException e) {
-            handleException("Failed to provision from " + this, e);
+            handleException(st, "Failed to provision from " + this, e);
         } catch (OauthClientException e) {
-            handleException("Authentication error from " + this, e);
+            handleException(st, "Authentication error from " + this, e);
         }
         return r;
     }
@@ -251,10 +255,10 @@ public class MansionCloud extends AbstractCloudImpl {
      * @param msg Message for the log
      * @param e Exception to display to the user
      */
-    private <T extends Exception> T handleException(String msg, T e) {
+    private <T extends Exception> T handleException(SlaveTemplate st, String msg, T e) {
         LOGGER.log(WARNING, msg,e);
         this.lastException = e;
-        backoffCounter.recordError();
+        getBackOffCounter(st).recordError();
         return e;
     }
 
@@ -262,17 +266,30 @@ public class MansionCloud extends AbstractCloudImpl {
         return lastException;
     }
 
-    public BackOffCounter getBackOffCounter() {
-        return backoffCounter;
+    public Collection<BackOffCounter> getBackOffCounters() {
+        return Collections.unmodifiableCollection(backoffCounters.values());
+    }
+
+    protected BackOffCounter getBackOffCounter(SlaveTemplate st) {
+        return getBackOffCounter(st.mansion);
+    }
+
+    private BackOffCounter getBackOffCounter(String id) {
+        BackOffCounter bc = backoffCounters.get(id);
+        if (bc==null) {
+            backoffCounters.putIfAbsent(id, new BackOffCounter(id, 2, MAX_BACKOFF_SECONDS, TimeUnit.SECONDS));
+            bc = backoffCounters.get(id);
+        }
+        return bc;
     }
 
     /**
      * Clear the back off window now.
      */
     @RequirePOST
-    public HttpResponse doRetryNow() {
+    public HttpResponse doRetryNow(@QueryParameter String broker) {
         checkPermission(Jenkins.ADMINISTER);
-        getBackOffCounter().clear();
+        getBackOffCounter(broker).clear();
         return HttpResponses.forwardToPreviousPage();
     }
 

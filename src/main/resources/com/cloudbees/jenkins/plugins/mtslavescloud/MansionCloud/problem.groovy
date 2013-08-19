@@ -22,16 +22,16 @@ l.layout {
     l.main_panel {
         h1("Slave Provisioning Problems")
 
-        def bc = my.backOffCounter
+        my.backOffCounters.each { bc ->
+            if (bc.isBackOffInEffect()) {
+                // if we are having a problem, report that
+                div(class:"warning",
+                    _("Requesting of ${bc.id} cloud slaves are temporarily suspended due to an earlier problem. ")+
+                    _("It will be tried again in ${getTimeSpanString(bc.nextAttempt-System.currentTimeMillis())}"))
 
-        if (bc.isBackOffInEffect()) {
-            // if we are having a problem, report that
-            div(class:"warning",
-                _("Requesting of cloud slaves are temporarily suspended due to an earlier problem. ")+
-                _("It will be tried again in ${getTimeSpanString(bc.nextAttempt-System.currentTimeMillis())}"))
-
-            form(method:"post",action:"retryNow", style:"margin:1em") {
-                f.submit(value:_("Retry Now"))
+                form(method:"post",action:"retryNow?broker=${bc.id}", style:"margin:1em") {
+                    f.submit(value:_("Retry Now"))
+                }
             }
         }
 

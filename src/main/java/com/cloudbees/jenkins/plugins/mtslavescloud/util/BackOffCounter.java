@@ -9,7 +9,6 @@ import static java.util.logging.Level.WARNING;
  * A counter which implements exponential backoff
  *
  * @author recampbell
- *
  */
 public class BackOffCounter {
 
@@ -22,13 +21,19 @@ public class BackOffCounter {
     private final long firstBackOff;
 
     /**
+     * Type of the mansion this counter is for.
+     */
+    public final String id;
+
+    /**
      * BackOff with initial and maximum times.
      *
      * @param first The initial backoff period from the first error, in the givenUnit
      * @param max The maximum time to backoff from the previous error
      * @param unit the unit of time of first and max.
      */
-    public BackOffCounter(long first, long max, TimeUnit unit) {
+    public BackOffCounter(String id, long first, long max, TimeUnit unit) {
+        this.id = id;
         maxBackOff = unit.toMillis(max);
         firstBackOff = unit.toMillis(first);
     }

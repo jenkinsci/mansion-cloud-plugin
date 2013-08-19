@@ -31,16 +31,17 @@ l.ajax {
             boolean shownSomething = false;
 
             // error from the cloud itself
-            def bc = m.backOffCounter
-            if (bc.isBackOffInEffect()) {
-                // if we are having a problem, report that
-                row(null) {
-                    div(class:"warning") {
-                        div {
-                            a(href:"${rootURL}/cloud/${m.name}/problem", _("Currently experiencing problem"))
+            m.backOffCounters.each { bc ->
+                if (bc.isBackOffInEffect()) {
+                    // if we are having a problem, report that
+                    row(null) {
+                        div(class:"warning") {
+                            div {
+                                a(href:"${rootURL}/cloud/${m.name}/problem", bc.id)
+                            }
+                            div("Currently experiencing problems. Will try again in ${Util.getTimeSpanString(bc.nextAttempt-System.currentTimeMillis())}")
+                            shownSomething = true
                         }
-                        div("Will try again in ${Util.getTimeSpanString(bc.nextAttempt-System.currentTimeMillis())}")
-                        shownSomething = true
                     }
                 }
             }
