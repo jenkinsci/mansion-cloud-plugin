@@ -1,17 +1,25 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 
+import com.cloudbees.jenkins.plugins.mtslavescloud.SlaveTemplate___.TemplateList;
 import hudson.Extension;
+import hudson.Util;
 import hudson.model.AbstractModelObject;
 import hudson.model.ItemGroup;
 import hudson.model.ItemGroupMixIn;
+import hudson.model.Label;
 import hudson.model.RootAction;
 import hudson.model.listeners.ItemListener;
 import hudson.security.Permission;
 import hudson.util.FormValidation;
 import hudson.util.Function1;
 import hudson.util.HttpResponses;
+import hudson.util.IOUtils;
 import jenkins.model.Jenkins;
 import jenkins.model.ModelObjectWithContextMenu;
+import net.sf.json.JSONObject;
+import net.sf.json.JsonConfig;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonParser;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -20,10 +28,12 @@ import org.kohsuke.stapler.StaplerResponse;
 import javax.servlet.ServletException;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +43,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static javax.servlet.http.HttpServletResponse.*;
+import static org.apache.commons.io.IOUtils.closeQuietly;
 
 /**
  * Adds a list of slave templates to the UI.
@@ -65,6 +76,28 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
         }));
         if (!r.isEmpty()) {
             LOGGER.log(Level.INFO, "{0} template(s) loaded", r.size());
+        }
+
+        // built-in models
+        InputStream in = null;
+        try {
+            in = getClass().getResourceAsStream("machines.json");
+            JSONObject js = JSONObject.fromObject(IOUtils.toString(in));
+            for (JSONObject def : Util.filter(js.getJSONArray("templates"),JSONObject.class)) {
+                String id = def.getString("id");
+                SlaveTemplate t = r.get(id);
+                if (!(t instanceof BuiltinSlaveTemplate))
+                    r.put(id,t=new BuiltinSlaveTemplate(id));
+
+                // fill in the definition
+                JsonConfig jsc = new JsonConfig();
+                jsc.setIgnorePublicFields(false);
+                JSONObject.toBean(def, t, jsc);
+            }
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Failed to load built-in templates".e);
+        } finally {
+            closeQuietly(in);
         }
 
         templates.putAll(r);
@@ -109,7 +142,7 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
     /**
      * Alias for {@link #getItem(String)}
      */
-    public SlaveTemplate get(String name) {
+    public final SlaveTemplate get(String name) {
         return getItem(name);
     }
 
@@ -120,6 +153,19 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
     public SlaveTemplate getDynamic(String token) {
         return getItem(token);
     }
+
+    /**
+     * Gets the first {@link SlaveTemplate} that matches the given label.
+     */
+    public SlaveTemplate get(Label label) {
+        for (SlaveTemplate st : templates.values()) {
+            if (st.matches(label))
+                return st;
+        }
+        return null;
+    }
+
+
 
     public File getRootDirFor(SlaveTemplate child) {
         return new File(getRootDir(),child.getName());
@@ -172,7 +218,7 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
         }
 
         // send the browser to the config page
-        return HttpResponses.redirectTo(result.getName()+"/configure");
+        return HttpResponses.redirectTo(result.getName() + "/configure");
     }
 
     // TODO: push to core

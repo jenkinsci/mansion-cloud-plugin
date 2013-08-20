@@ -1,13 +1,13 @@
-package com.cloudbees.jenkins.plugins.mtslavescloud;
+package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 
 import com.cloudbees.api.oauth.OauthClientException;
+import com.cloudbees.jenkins.plugins.mtslavescloud.MansionCloud;
 import com.cloudbees.mtslaves.client.FileSystemRef;
 import com.cloudbees.mtslaves.client.SnapshotRef;
 import com.cloudbees.mtslaves.client.VirtualMachine;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.FileSystemsProperty;
 import hudson.XmlFile;
-import jenkins.model.Jenkins;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,7 +17,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.*;
 
 /**
  * A set of {@link FileSystemLineage}s that are used together for a single {@link SlaveTemplate}.
@@ -47,7 +47,7 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
      * The file in which we store the latest snapshots of workspace file systems.
      */
     private XmlFile getPersistentFileSystemRecordFile() {
-        return new XmlFile(new File(Jenkins.getInstance().getRootDir(),"cloudSlaves/"+template.id+"/clan.properties"));
+        return new XmlFile(new File(template.getRootDir(),"clan.xml"));
     }
 
     public void add(FileSystemLineage fsl) {
@@ -85,7 +85,7 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
         FileSystemsProperty fsp = vm.getProperty(FileSystemsProperty.class);
         if (fsp==null)  return;
 
-        for (String persistedPath : template.persistentFileSystems) {
+        for (String persistedPath : template.getPersistentFileSystems()) {
             URL fs = fsp.getFileSystemUrlFor(persistedPath);
             if (fs==null)   continue;   // shouldn't happen, but let's be defensive
 
@@ -102,7 +102,7 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
         try {
             save();
         } catch (IOException e) {
-            LOGGER.log(WARNING, "Failed to persiste the clan",e);
+            LOGGER.log(WARNING, "Failed to persist the clan",e);
         }
     }
 

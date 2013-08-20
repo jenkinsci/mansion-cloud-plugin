@@ -1,5 +1,6 @@
-package com.cloudbees.jenkins.plugins.mtslavescloud;
+package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 
+import com.cloudbees.jenkins.plugins.mtslavescloud.*;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import hudson.Util;
 import net.sf.json.JSONObject;

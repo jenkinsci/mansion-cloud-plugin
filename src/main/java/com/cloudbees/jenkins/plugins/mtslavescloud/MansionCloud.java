@@ -7,6 +7,8 @@ import com.cloudbees.api.cr.Capability;
 import com.cloudbees.api.cr.Credential;
 import com.cloudbees.api.oauth.OauthClientException;
 import com.cloudbees.api.oauth.TokenRequest;
+import com.cloudbees.jenkins.plugins.mtslavescloud.templates.SlaveTemplate;
+import com.cloudbees.jenkins.plugins.mtslavescloud.templates.SlaveTemplateList;
 import com.cloudbees.jenkins.plugins.mtslavescloud.util.BackOffCounter;
 import com.cloudbees.mtslaves.client.BrokerRef;
 import com.cloudbees.mtslaves.client.HardwareSpec;
@@ -156,14 +158,7 @@ public class MansionCloud extends AbstractCloudImpl {
      */
     @Override
     public boolean canProvision(Label label) {
-        try {
-            Map<String,SlaveTemplate> m = SlaveTemplate.load(this.getClass().getResourceAsStream("machines.json"));
-
-            return label == null || m.get(label.toString()) != null || label.toString().startsWith("m1.");
-        } catch (IOException e) {
-            throw new Error(e);
-        }
-
+        return label==null || SlaveTemplateList.get().get(label)!=null;
     }
 
     /**

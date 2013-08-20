@@ -1,6 +1,7 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.hudson.plugins.Config;
+import com.cloudbees.jenkins.plugins.mtslavescloud.templates.FileSystemClan;
 import com.cloudbees.jenkins.plugins.mtslavescloud.util.PromisedFuture;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;

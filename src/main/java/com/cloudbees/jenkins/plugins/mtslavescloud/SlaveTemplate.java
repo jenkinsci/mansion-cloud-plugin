@@ -1,5 +1,6 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
+import com.cloudbees.jenkins.plugins.mtslavescloud.templates.SlaveTemplate;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import hudson.util.IOUtils;
@@ -25,7 +26,7 @@ import static org.apache.commons.io.IOUtils.*;
  *
  * @author Kohsuke Kawaguchi
  */
-public class SlaveTemplate {
+class SlaveTemplate___ {
     /**
      * Unique ID that globally distinguishes this template.
      */
@@ -69,14 +70,6 @@ public class SlaveTemplate {
         }
     }
 
-    /**
-     * Gets the current clan of {@link FileSystemLineage}s this master has for this slave template.
-     */
-    public FileSystemClan loadClan() throws IOException {
-        FileSystemClan clan = new FileSystemClan(owner,this);
-        clan.load();
-        return clan;
-    }
 
     public static Map<String,SlaveTemplate> load(InputStream in) throws IOException {
         try {
