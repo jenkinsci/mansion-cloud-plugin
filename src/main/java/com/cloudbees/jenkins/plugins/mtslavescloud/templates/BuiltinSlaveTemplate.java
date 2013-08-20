@@ -1,7 +1,11 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 
 import hudson.Extension;
+import hudson.model.Descriptor.FormException;
+import net.sf.json.JSONObject;
+import org.kohsuke.stapler.StaplerRequest;
 
+import javax.servlet.ServletException;
 import java.io.IOException;
 
 /**
@@ -10,6 +14,11 @@ import java.io.IOException;
 public class BuiltinSlaveTemplate extends SlaveTemplate {
     public BuiltinSlaveTemplate(String name) {
         super(name);
+    }
+
+    @Override
+    protected void submit(StaplerRequest request, JSONObject json) throws ServletException, FormException {
+        // nothing to configure
     }
 
     @Override

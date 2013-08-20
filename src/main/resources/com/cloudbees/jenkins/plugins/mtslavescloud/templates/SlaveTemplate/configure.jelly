@@ -2,12 +2,14 @@
   <l:layout title="${%Configure} - ${it.displayName}" permission="${it.EXTENDED_READ}">
     <st:include page="sidepanel.jelly"/>
     <l:main-panel>
-      <h1>${it.displayName}</h1>
+      <h1>${it.displayName} (${it.descriptor.displayName})</h1>
       <f:form method="post" action="configSubmit" name="config">
 
-        <f:nested>
-          TODO
-        </f:nested>
+        <f:entry field="enabled">
+          <f:checkbox title="${%Enable this slave template}"/>
+        </f:entry>
+
+        <st:include page="configure-common" />
 
         <j:if test="${h.hasPermission(it,it.CONFIGURE)}">
           <f:bottomButtonBar>

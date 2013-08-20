@@ -3,18 +3,23 @@
   <st:include page="sidepanel.jelly"/>
   <l:main-panel>
     <j:set var="iconSize" value="32x32" />
+    <style>
+      .narrow { width: 32px; }
+    </style>
     <table id="templates" class="sortable pane bigtable">
       <tr>
-        <th />
-        <th initialSortDir="down">${%Name}</th>
+        <th class="narrow"/>
+        <th style="text-align:left" initialSortDir="down">${%Name}</th>
+        <th style="text-align:left">${%Type}</th>
         <th />
       </tr>
       <j:forEach var="m" items="${it.items}">
           <tr>
-            <td><img src="${imagesURL}/32x32/computer.png"/></td>
+            <td class="narrow"><img src="${imagesURL}/32x32/computer.png"/></td>
             <td><a href="${rootURL}/${m.url}" class="model-link">${m.displayName}</a></td>
+            <td>${m.descriptor.displayName}</td>
 
-            <td style="width:36px">
+            <td class="narrow">
               <j:if test="${m.hasPermission(m.CONFIGURE)}">
                 <a href="${rootURL}/${m.url}configure">
                   <img src="${imagesURL}/32x32/setting.png" title="${%Configure}" alt="${%Configure}" />
