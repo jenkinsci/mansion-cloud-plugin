@@ -1,7 +1,10 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 
+import com.cloudbees.api.oauth.OauthClientException;
 import com.cloudbees.jenkins.plugins.mtslavescloud.*;
+import com.cloudbees.mtslaves.client.SnapshotRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
+import hudson.AbortException;
 import hudson.Util;
 import net.sf.json.JSONObject;
 
@@ -26,7 +29,7 @@ import java.util.List;
  *
  * @author Kohsuke Kawaguchi
  */
-class FileSystemLineage {
+public class FileSystemLineage {
     /**
      * Where is this file system mounted in the slave?
      */
@@ -42,11 +45,19 @@ class FileSystemLineage {
         this.snapshot = snapshot;
     }
 
-    String getPath() {
+    public String getPath() {
         return path;
     }
 
-    public void applyTo(VirtualMachineSpec spec) {
+    public URL getSnapshot() {
+        return snapshot;
+    }
+
+    void applyTo(VirtualMachineSpec spec) {
         spec.fs(snapshot,path);
+    }
+
+    SnapshotRef getRef(MansionCloud mansion) throws AbortException, OauthClientException {
+        return new SnapshotRef(snapshot,mansion.createAccessToken(snapshot));
     }
 }

@@ -113,9 +113,9 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
 
 
     /**
-     * Gets the current clan of {@link FileSystemLineage}s this master has for this slave template.
+     * Loads the current clan of {@link FileSystemLineage}s this master has for this slave template.
      */
-    public FileSystemClan loadClan() throws IOException {
+    public FileSystemClan getClan() throws IOException {
         FileSystemClan clan = new FileSystemClan(getMansion(),this);
         clan.load();
         return clan;

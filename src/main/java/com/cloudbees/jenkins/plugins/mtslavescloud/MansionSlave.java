@@ -86,7 +86,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
-        FileSystemClan clan = template.loadClan();
+        FileSystemClan clan = template.getClan();
         clan.update(vm.getState());
         vm.dispose();
         listener.getLogger().println("Disposed " + vm.url);

@@ -8,6 +8,9 @@ import com.cloudbees.mtslaves.client.VirtualMachine;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.FileSystemsProperty;
 import hudson.XmlFile;
+import hudson.util.HttpResponses;
+import org.kohsuke.stapler.HttpResponse;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,6 +40,10 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
         if (cloud==null)    throw new IllegalArgumentException();
         this.cloud = cloud;
         this.template = template;
+    }
+
+    public boolean isEmpty() {
+        return lineages.isEmpty();
     }
 
     public Iterator<FileSystemLineage> iterator() {
@@ -104,6 +111,19 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
         } catch (IOException e) {
             LOGGER.log(WARNING, "Failed to persist the clan",e);
         }
+    }
+
+    /**
+     * Deletes all the current snapshots and reverts to the clean image.
+     */
+    @RequirePOST
+    public HttpResponse doDispose() throws IOException, OauthClientException {
+        template.checkPermission(SlaveTemplate.CONFIGURE);
+        for (FileSystemLineage e : this) {
+            e.getRef(cloud).dispose();
+        }
+        getPersistentFileSystemRecordFile().delete();
+        return HttpResponses.forwardToPreviousPage();
     }
 
     private static final Logger LOGGER = Logger.getLogger(FileSystemClan.class.getName());

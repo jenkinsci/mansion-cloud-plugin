@@ -165,7 +165,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
         spec.sshd(JENKINS_USER, 15000, publicKey.trim()); // TODO: should UID be configurable?
         try {
             VirtualMachineSpec specWithSnapshots = spec.clone();
-            FileSystemClan fileSystemClan = st.loadClan();
+            FileSystemClan fileSystemClan = st.getClan();
             fileSystemClan.applyTo(specWithSnapshots);    // if we have more up-to-date snapshots, use them
             vm.setup(specWithSnapshots);
         } catch (VirtualMachineConfigurationException e) {
