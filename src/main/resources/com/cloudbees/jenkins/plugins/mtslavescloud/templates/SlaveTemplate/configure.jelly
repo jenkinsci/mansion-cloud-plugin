@@ -9,6 +9,10 @@
 
       <f:form method="post" action="configSubmit" name="config">
 
+        <f:entry field="id" title="${%Label}">
+          <f:readOnlyTextbox />
+        </f:entry>
+
         <f:entry field="enabled">
           <f:checkbox title="${%Enable this slave template}"/>
         </f:entry>
