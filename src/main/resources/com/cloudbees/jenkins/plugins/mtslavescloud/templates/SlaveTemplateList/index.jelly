@@ -21,7 +21,7 @@
             <td>
               <a class="model-link" href="${rootURL}/label/${m.id}">${m.id}</a>
             </td>
-            <td><a href="${rootURL}/${m.url}" class="model-link">${m.displayName}</a></td>
+            <td>${m.descriptor.displayName}</td>
 
             <td class="narrow">
               <j:if test="${m.hasPermission(m.CONFIGURE)}">
