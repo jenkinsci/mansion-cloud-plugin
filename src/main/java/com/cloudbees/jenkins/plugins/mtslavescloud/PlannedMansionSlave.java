@@ -18,12 +18,15 @@ import hudson.model.Label;
 import hudson.model.Node;
 import hudson.plugins.sshslaves.SSHLauncher;
 import hudson.slaves.NodeProvisioner.PlannedNode;
+import hudson.util.HttpResponses;
 import hudson.util.IOException2;
 import hudson.util.TimeUnit2;
 import jenkins.model.Jenkins;
 import org.acegisecurity.GrantedAuthority;
 import org.bouncycastle.openssl.PEMWriter;
 import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
+import org.kohsuke.stapler.HttpResponse;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -77,6 +80,8 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      * One line status of what we are doing.
      */
     private String status; // TODO: change to Localizable for i18n
+
+    private volatile boolean dismissed;
 
 
     public PlannedMansionSlave(Label label, SlaveTemplate template, VirtualMachineRef vm) {
@@ -273,12 +278,20 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
         cloud.getInProgressSet().update();
     }
 
+    @RequirePOST
+    public HttpResponse doDismiss() {
+        cloud.checkPermission(Jenkins.ADMINISTER);
+        dismissed = true;
+        cloud.getInProgressSet().update();
+        return HttpResponses.redirectToContextRoot();
+    }
+
     /**
      * Is this {@link PlannedMansionSlave} interesting enough to show in the management/monitoring UI?
      */
     protected boolean isNoteWorthy() {
         if (spent==0)     return true;    // in progress
-        if (problem!=null && System.currentTimeMillis() < spent+PROBLEM_RETENTION_SPAN )
+        if (problem!=null && System.currentTimeMillis() < spent+PROBLEM_RETENTION_SPAN && !dismissed)
             return true;    // recent enough failure
         return false;
     }
