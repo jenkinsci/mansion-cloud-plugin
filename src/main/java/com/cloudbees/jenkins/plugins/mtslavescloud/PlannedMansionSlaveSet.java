@@ -1,6 +1,8 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -25,10 +27,21 @@ public class PlannedMansionSlaveSet implements Iterable<PlannedMansionSlave> {
      *
      * Called by {@link PlannedMansionSlave} when there's a status change.
      */
-    /*package*/ void update() {
+    /*package*/
+    @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
+    void update() {
+        List<PlannedMansionSlave> failures = new ArrayList<PlannedMansionSlave>();
         for (PlannedMansionSlave s : data) {
             if (!s.isNoteWorthy())
                 data.remove(s);
+            if (s.getProblem()!=null)
+                failures.add(s);
+        }
+
+        // only keep up to N failures to avoid cluttering
+        // delete from front to prefer newer failures
+        if (failures.size()>FAILURE_CAP) {
+            data.removeAll(failures.subList(0,failures.size()-FAILURE_CAP));
         }
     }
 
@@ -46,4 +59,9 @@ public class PlannedMansionSlaveSet implements Iterable<PlannedMansionSlave> {
         }
         return null;
     }
+
+    /**
+     * Only keep up to N failures.
+     */
+    public static int FAILURE_CAP = Integer.getInteger(PlannedMansionSlave.class.getName()+".failureCap",8);
 }
