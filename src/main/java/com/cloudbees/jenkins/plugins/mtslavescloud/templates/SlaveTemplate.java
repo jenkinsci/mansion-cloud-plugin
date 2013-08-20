@@ -28,7 +28,7 @@ import java.util.List;
  */
 public abstract class SlaveTemplate extends AbstractItem implements Describable<SlaveTemplate> {
 
-    private boolean enabled;
+    private boolean disabled;
     private String account;
 
     protected SlaveTemplate(String name) {
@@ -43,7 +43,7 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
      * Is this template instantiable?
      */
     public boolean isEnabled() {
-        return enabled;
+        return !disabled;
     }
 
     /**
@@ -143,7 +143,7 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
     }
 
     protected void submit(JSONObject json) throws ServletException, Descriptor.FormException {
-        this.enabled = json.has("enabled");
+        this.disabled = !json.has("enabled");
         this.account = json.optString("account");
     }
 
