@@ -35,7 +35,9 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
         super(SlaveTemplateList.get(), name);
     }
 
-    public abstract String getId();
+    public final String getId() {
+        return getName();
+    }
 
     /***
      * Is this template instantiable?
@@ -63,7 +65,7 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
 
     /**
      * Of the file systems that are specified in {@link #createSpec()}, designate ones that
-     * should be carried over to the next session.
+     * should be carried over to the next session. Read-only.
      */
     public List<String> getPersistentFileSystems() {
         return Collections.emptyList();
@@ -86,12 +88,25 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
     }
 
     /**
-     * Checks if this slave template matches the given label
+     * Checks if this slave template matches the given label.
+     *
+     * This recognizes the size specifier "small" and "large" aside from the main label
      */
     public boolean matches(Label label) {
         return label.matches(new VariableResolver<Boolean>() {
             public Boolean resolve(String name) {
-                return name.equals(getId());
+                return name.equals(getId()) || name.equals("small") || name.equals("large");
+            }
+        });
+    }
+
+    /**
+     * Checks if the given label matches this slave template with the specific hardware size.
+     */
+    public boolean matches(Label label, final String size) {
+        return label.matches(new VariableResolver<Boolean>() {
+            public Boolean resolve(String name) {
+                return name.equals(getId()) || name.equals(size);
             }
         });
     }
@@ -129,6 +144,7 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
 
     protected void submit(JSONObject json) throws ServletException, Descriptor.FormException {
         this.enabled = json.has("enabled");
+        this.account = json.optString("account");
     }
 
 

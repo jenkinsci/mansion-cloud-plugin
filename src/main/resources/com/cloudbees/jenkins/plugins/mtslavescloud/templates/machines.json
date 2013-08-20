@@ -1,8 +1,8 @@
 { "templates" : [
     {
         "id" : "lxc-fedora17",
-        "displayName" : "Fedora 17 LXC slave",
-        "mansion": "lxc",
+        "displayName" : "DEV@cloud Standard Linux",
+        "mansionType": "lxc",
         "spec" : {
             "configs" : [
                 {
@@ -20,8 +20,8 @@
     },
     {
         "id" : "osx",
-        "displayName" : "Mac OS X",
-        "mansion": "osx",
+        "displayName" : "DEV@cloud Standard Mac OS X",
+        "mansionType": "osx",
         "spec" : {
             "configs" : [
                 {

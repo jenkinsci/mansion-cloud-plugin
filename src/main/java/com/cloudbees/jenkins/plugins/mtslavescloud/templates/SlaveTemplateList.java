@@ -1,6 +1,5 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 
-import com.cloudbees.jenkins.plugins.mtslavescloud.SlaveTemplate___.TemplateList;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.AbstractModelObject;
@@ -13,13 +12,13 @@ import hudson.security.Permission;
 import hudson.util.FormValidation;
 import hudson.util.Function1;
 import hudson.util.HttpResponses;
-import hudson.util.IOUtils;
+import hudson.util.VariableResolver;
+import hudson.util.VariableResolver.ByMap;
 import jenkins.model.Jenkins;
 import jenkins.model.ModelObjectWithContextMenu;
-import net.sf.json.JSONObject;
-import net.sf.json.JsonConfig;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonParser;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.DeserializationConfig.Feature;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -33,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,7 +41,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static javax.servlet.http.HttpServletResponse.*;
-import static org.apache.commons.io.IOUtils.closeQuietly;
+import static org.apache.commons.io.IOUtils.*;
 
 /**
  * Adds a list of slave templates to the UI.
@@ -74,31 +72,41 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
                 return m.getName();
             }
         }));
-        if (!r.isEmpty()) {
-            LOGGER.log(Level.INFO, "{0} template(s) loaded", r.size());
-        }
 
         // built-in models
         InputStream in = null;
         try {
-            in = getClass().getResourceAsStream("machines.json");
-            JSONObject js = JSONObject.fromObject(IOUtils.toString(in));
-            for (JSONObject def : Util.filter(js.getJSONArray("templates"),JSONObject.class)) {
-                String id = def.getString("id");
+            // put annotations explicitly for unmarshalling BuiltinSalveTemplate
+            ObjectMapper om = new ObjectMapper();
+            om.disable(Feature.AUTO_DETECT_SETTERS);
+            om.disable(Feature.AUTO_DETECT_FIELDS);
+            om.disable(Feature.USE_GETTERS_AS_SETTERS);
+            om.disable(Feature.AUTO_DETECT_CREATORS);
+
+            JsonNode dom = om.readTree(getClass().getResource("machines.json"));
+            for (JsonNode def : dom.get("templates")) {
+                String id = def.get("id").asText();
+
                 SlaveTemplate t = r.get(id);
                 if (!(t instanceof BuiltinSlaveTemplate))
                     r.put(id,t=new BuiltinSlaveTemplate(id));
 
                 // fill in the definition
-                JsonConfig jsc = new JsonConfig();
-                jsc.setIgnorePublicFields(false);
-                JSONObject.toBean(def, t, jsc);
+                om.readerForUpdating(t).readValue(def);
             }
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Failed to load built-in templates".e);
+            LOGGER.log(Level.SEVERE, "Failed to load built-in templates",e);
         } finally {
             closeQuietly(in);
         }
+
+        // remove built-in templates that are no longer active
+        for (BuiltinSlaveTemplate b : Util.filter(r.values(), BuiltinSlaveTemplate.class)) {
+            if (!b.hasSpec())
+                r.remove(b.getName());
+        }
+
+        LOGGER.log(Level.INFO, "{0} template(s) loaded", r.size());
 
         templates.putAll(r);
     }
@@ -158,10 +166,15 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
      * Gets the first {@link SlaveTemplate} that matches the given label.
      */
     public SlaveTemplate get(Label label) {
+        // backward compatibility
+        if (label==null || label.matches(M1_SMALL) || label.matches(M1_LARGE))
+            return get("lxc-fedora17");
+
         for (SlaveTemplate st : templates.values()) {
             if (st.matches(label))
                 return st;
         }
+
         return null;
     }
 
@@ -284,4 +297,15 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
 
     // for now, I'm not defining a new set of permissions
     public static final Permission CREATE = Jenkins.ADMINISTER;
+
+    public static final VariableResolver<Boolean> M1_SMALL = new VariableResolver<Boolean>() {
+        public Boolean resolve(String name) {
+            return name.equals("m1.small");
+        }
+    };
+    public static final VariableResolver<Boolean> M1_LARGE = new VariableResolver<Boolean>() {
+        public Boolean resolve(String name) {
+            return name.equals("m1.large");
+        }
+    };
 }

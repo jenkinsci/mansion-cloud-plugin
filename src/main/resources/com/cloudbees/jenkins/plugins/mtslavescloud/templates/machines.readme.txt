@@ -1,0 +1,8 @@
+This JSON file defines available built-in slave templates. These slave templates
+will be always forced upon users (except they can disable them), and users will not
+be able to change the configuration of them.
+
+See BuiltinSlaveTemplate that matches this.
+
+For user-modifiable slave templates, there are other subtypes of SlaveTemplate available.
+

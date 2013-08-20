@@ -1,6 +1,7 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.jenkins.plugins.mtslavescloud.templates.FileSystemClan;
+import com.cloudbees.jenkins.plugins.mtslavescloud.templates.SlaveTemplate;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import hudson.Extension;
 import hudson.Util;

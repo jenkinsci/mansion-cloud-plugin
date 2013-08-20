@@ -1,5 +1,8 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
   <f:section title="Definition">
+    <f:entry field="mansionType" title="${%Mansion Type}">
+      <f:textbox />
+    </f:entry>
     <f:entry field="definition" title="${%Definition}">
       <f:textarea />
     </f:entry>

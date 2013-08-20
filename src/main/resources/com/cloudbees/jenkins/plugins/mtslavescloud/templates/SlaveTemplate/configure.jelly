@@ -13,6 +13,14 @@
           <f:checkbox title="${%Enable this slave template}"/>
         </f:entry>
 
+        <j:if test="${descriptor.hasMultipleAccounts()}">
+          <f:optionalBlock checked="${it.account!=null}" inline="true" title="${%Restrict Account for this template}">
+            <f:entry field="account" title="${%Account}">
+              <f:select />
+            </f:entry>
+          </f:optionalBlock>
+        </j:if>
+
         <st:include page="configure-common" />
 
         <j:if test="${h.hasPermission(it,it.CONFIGURE)}">

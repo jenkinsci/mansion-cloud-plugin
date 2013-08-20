@@ -41,7 +41,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -158,36 +157,7 @@ public class MansionCloud extends AbstractCloudImpl {
      */
     @Override
     public boolean canProvision(Label label) {
-        return label==null || SlaveTemplateList.get().get(label)!=null;
-    }
-
-    /**
-     * Maps a label to a template.
-     *
-     * This is a scaffolding for time being as the mapping to label to {@link SlaveTemplate}
-     * should be configured in each instance (with a reasonable defaulting to hide that complexity
-     * for those who don't care.)
-     */
-    private SlaveTemplate resolveToTemplate(Label label) {
-        try {
-            Map<String,SlaveTemplate> m = SlaveTemplate.load(this.getClass().getResourceAsStream("machines.json"));
-            for (SlaveTemplate t : m.values()) {
-                t.postInit(this);
-            }
-
-            if (label != null) {
-                //trim off anything after the last '.' since that optionally contains the size
-                int imageEnd = label.toString().contains(".") ? label.toString().indexOf(".") : label.toString().length();
-                String image = label.toString().substring(0,imageEnd);
-                SlaveTemplate s = m.get(image);
-                if (s!=null)    return s;
-            }
-
-            // until we tidy up the template part, fall back to LXC as the default so as not to block Ryan
-            return m.get("lxc-fedora17");
-        } catch (IOException e) {
-            throw new Error(e);
-        }
+        return SlaveTemplateList.get().get(label)!=null;
     }
 
     @Override
@@ -214,7 +184,7 @@ public class MansionCloud extends AbstractCloudImpl {
     public Collection<PlannedNode> provision(final Label label, int excessWorkload) {
         LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
 
-        SlaveTemplate st = resolveToTemplate(label);
+        SlaveTemplate st = SlaveTemplateList.get().get(label);
         if (getBackOffCounter(st).isBackOffInEffect())
             return Collections.emptyList();
 
@@ -222,14 +192,9 @@ public class MansionCloud extends AbstractCloudImpl {
         try {
             for (int i=0; i<excessWorkload; i++) {
 
-                HardwareSpec box;
-                if (label != null && label.toString().contains(".")) {
-                    box = new HardwareSpec(label.toString().substring(label.toString().lastIndexOf(".") + 1));
-                } else {
-                    box = new HardwareSpec("small");
-                }
+                HardwareSpec box = getBoxOf(st,label);
 
-                URL broker = new URL(this.broker,"/"+st.mansion+"/");
+                URL broker = new URL(this.broker,"/"+st.getMansionType()+"/");
                 final VirtualMachineRef vm = new BrokerRef(broker,createAccessToken(broker)).createVirtualMachine(box);
                 LOGGER.fine("Allocated "+vm.url);
 
@@ -241,6 +206,20 @@ public class MansionCloud extends AbstractCloudImpl {
             handleException(st, "Authentication error from " + this, e);
         }
         return r;
+    }
+
+    /**
+     * Figure out the size of the box to provision.
+     *
+     * If no explicit size specifier is set in the given label, this method returns "small"
+     */
+    private HardwareSpec getBoxOf(SlaveTemplate st, Label label) {
+        if (st.matches(label,"small"))
+            return new HardwareSpec("small");
+        if (st.matches(label,"large"))
+            return new HardwareSpec("large");
+
+        throw new AssertionError("Size computation problem with label: "+label);
     }
 
     /**
@@ -266,7 +245,7 @@ public class MansionCloud extends AbstractCloudImpl {
     }
 
     protected BackOffCounter getBackOffCounter(SlaveTemplate st) {
-        return getBackOffCounter(st.mansion);
+        return getBackOffCounter(st.getMansionType());
     }
 
     private BackOffCounter getBackOffCounter(String id) {

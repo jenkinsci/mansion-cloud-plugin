@@ -10,6 +10,7 @@ import javax.servlet.ServletException;
  * @author Kohsuke Kawaguchi
  */
 public class LocalSlaveTemplate extends SlaveTemplate {
+    private String mansionType;
     private String definition;
 
     public LocalSlaveTemplate(String name) {
@@ -21,9 +22,20 @@ public class LocalSlaveTemplate extends SlaveTemplate {
     }
 
     @Override
+    public JSONObject createSpec() {
+        return JSONObject.fromObject(getDefinition());
+    }
+
+    @Override
+    public String getMansionType() {
+        return mansionType;
+    }
+
+    @Override
     protected void submit(JSONObject json) throws ServletException, FormException {
         super.submit(json);
         definition = json.getString("definition");
+        mansionType = json.getString("mansionType");
     }
 
     @Extension

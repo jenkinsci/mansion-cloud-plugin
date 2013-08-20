@@ -2,6 +2,7 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import com.cloudbees.hudson.plugins.Config;
 import com.cloudbees.jenkins.plugins.mtslavescloud.templates.FileSystemClan;
+import com.cloudbees.jenkins.plugins.mtslavescloud.templates.SlaveTemplate;
 import com.cloudbees.jenkins.plugins.mtslavescloud.util.PromisedFuture;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
@@ -81,7 +82,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
     public PlannedMansionSlave(Label label, SlaveTemplate template, VirtualMachineRef vm) {
         super(vm.getId(), new PromisedFuture<Node>(), 1);
         this.st = template;
-        this.cloud = template.getOwner();
+        this.cloud = template.getMansion();
         this.vm = vm;
         this.label = label;
 
@@ -129,7 +130,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      * Gets the type of the mansion
      */
     public String getMansionType() {
-        return st.mansion;
+        return st.getMansionType();
     }
 
     /**
