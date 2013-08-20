@@ -6,6 +6,12 @@
 
       <t:editableDescription permission="${it.CONFIGURE}"/>
 
+      <!-- label cloud -->
+      <div>
+        ${%Label:}
+        <a class="model-link" href="${rootURL}/label/${it.id}">${it.id}</a>
+      </div>
+
       <st:include page="main.jelly" optional="true"/>
     </l:main-panel>
   </l:layout>
