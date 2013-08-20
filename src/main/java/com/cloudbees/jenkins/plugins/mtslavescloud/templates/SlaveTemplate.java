@@ -3,7 +3,6 @@ package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 import hudson.model.AbstractItem;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
-import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.security.Permission;
 import hudson.util.FormApply;
@@ -22,8 +21,17 @@ import java.util.Collections;
  */
 public abstract class SlaveTemplate extends AbstractItem implements Describable<SlaveTemplate> {
 
+    private boolean enabled;
+
     protected SlaveTemplate(String name) {
         super(SlaveTemplateList.get(), name);
+    }
+
+    /***
+     * Is this template instantiable?
+     */
+    public boolean isEnabled() {
+        return enabled;
     }
 
     public SlaveTemplateDescriptor getDescriptor() {
@@ -33,12 +41,14 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
     public HttpResponse doConfigSubmit(StaplerRequest req) throws ServletException, IOException, Descriptor.FormException {
         checkPermission(CONFIGURE);
         JSONObject form = req.getSubmittedForm();
-        submit(req, form);
+        submit(form);
         save();
         return FormApply.success(".");
     }
 
-    protected abstract void submit(StaplerRequest request, JSONObject json) throws ServletException, Descriptor.FormException;
+    protected void submit(JSONObject json) throws ServletException, Descriptor.FormException {
+        this.enabled = json.has("enabled");
+    }
 
 
 

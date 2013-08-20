@@ -2,7 +2,11 @@
   <l:layout title="${%Configure} - ${it.displayName}" permission="${it.EXTENDED_READ}">
     <st:include page="sidepanel.jelly"/>
     <l:main-panel>
-      <h1>${it.displayName} (${it.descriptor.displayName})</h1>
+      <h1>${it.descriptor.displayName}: ${it.displayName}</h1>
+
+      <j:set var="instance" value="${it}"/>
+      <j:set var="descriptor" value="${it.descriptor}"/>
+
       <f:form method="post" action="configSubmit" name="config">
 
         <f:entry field="enabled">

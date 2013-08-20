@@ -67,10 +67,7 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
             LOGGER.log(Level.INFO, "{0} template(s) loaded", r.size());
         }
 
-        // replace 'models'. since we don't have the atomic replace operation,
-        // first overwrite all and then remove ones that are no loner there
-        // TODO: update to models.replaceBy() when we can depend on it
-        r.putAll(r);
+        templates.putAll(r);
     }
 
     public String getFullName() {

@@ -3,7 +3,6 @@ package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 import hudson.Extension;
 import hudson.model.Descriptor.FormException;
 import net.sf.json.JSONObject;
-import org.kohsuke.stapler.StaplerRequest;
 
 import javax.servlet.ServletException;
 
@@ -17,8 +16,13 @@ public class LocalSlaveTemplate extends SlaveTemplate {
         super(name);
     }
 
+    public String getDefinition() {
+        return definition;
+    }
+
     @Override
-    protected void submit(StaplerRequest request, JSONObject json) throws ServletException, FormException {
+    protected void submit(JSONObject json) throws ServletException, FormException {
+        super.submit(json);
         definition = json.getString("definition");
     }
 
