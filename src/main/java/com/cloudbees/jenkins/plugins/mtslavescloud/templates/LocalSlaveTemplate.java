@@ -7,6 +7,8 @@ import net.sf.json.JSONObject;
 import javax.servlet.ServletException;
 
 /**
+ * {@link SlaveTemplate} that lets the user defines the spec JSON. Experimental.
+ *
  * @author Kohsuke Kawaguchi
  */
 public class LocalSlaveTemplate extends SlaveTemplate {
