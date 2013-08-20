@@ -1,0 +1,12 @@
+<!--
+  Creates a new model.
+-->
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:s="/lib/form">
+  <l:layout title="${%Create a new slave template}" norefresh="true" permission="${it.CREATE}">
+    <st:include page="sidepanel.jelly" />
+    <l:main-panel>
+      <n:form nameTitle="${%Template name}" copyTitle="${%Copy Existing Slave Template}" copyNames="${it.allNames}"
+              descriptors="${it.getInstantiableTemplateDescriptors()}" checkUrl="checkName" xmlns:n="/lib/hudson/newFromList" />
+    </l:main-panel>
+  </l:layout>
+</j:jelly>

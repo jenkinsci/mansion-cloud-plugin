@@ -1,0 +1,16 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:s="/lib/form">
+  <l:side-panel>
+    <l:tasks>
+      <l:task icon="images/24x24/up.png" href="../" title="${%Back to Slave Templates}" contextMenu="false"/>
+      <j:choose>
+        <j:when test="${h.hasPermission(it,it.CONFIGURE)}">
+          <l:task icon="images/24x24/setting.png" href="configure" title="${%Configure}"/>
+        </j:when>
+        <j:when test="${h.hasPermission(it,it.EXTENDED_READ)}">
+          <l:task icon="images/24x24/setting.png" href="configure" title="${%View Configuration}"/>
+        </j:when>
+      </j:choose>
+      <l:task icon="images/24x24/edit-delete.png" href="delete" title="${%Delete Slave Template}" permission="${it.DELETE}"/>
+    </l:tasks>
+  </l:side-panel>
+</j:jelly>

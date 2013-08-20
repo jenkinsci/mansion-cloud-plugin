@@ -1,0 +1,28 @@
+<l:layout title="${%Templates}" xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
+          xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
+  <st:include page="sidepanel.jelly"/>
+  <l:main-panel>
+    <j:set var="iconSize" value="32x32" />
+    <table id="templates" class="sortable pane bigtable">
+      <tr>
+        <th />
+        <th initialSortDir="down">${%Name}</th>
+        <th />
+      </tr>
+      <j:forEach var="m" items="${it.items}">
+          <tr>
+            <td><img src="${imagesURL}/32x32/computer.png"/></td>
+            <td><a href="${rootURL}/${m.url}" class="model-link">${m.displayName}</a></td>
+
+            <td style="width:36px">
+              <j:if test="${m.hasPermission(m.CONFIGURE)}">
+                <a href="${rootURL}/${m.url}configure">
+                  <img src="${imagesURL}/32x32/setting.png" title="${%Configure}" alt="${%Configure}" />
+                </a>
+              </j:if>
+            </td>
+          </tr>
+      </j:forEach>
+    </table>
+  </l:main-panel>
+</l:layout>

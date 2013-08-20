@@ -1,0 +1,10 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:s="/lib/form">
+  <l:header />
+  <l:side-panel>
+    <l:tasks>
+      <l:task icon="images/24x24/up.png" href="${rootURL}/" title="${%Back to Dashboard}" contextMenu="false"/>
+      <!--<l:task icon="images/24x24/refresh.png" href="reload" title="${%Reload from Disk}" permission="${app.ADMINISTER}" />-->
+      <l:task icon="images/24x24/gear.png" href="new" title="${%New Template}" permission="${it.CREATE}" />
+    </l:tasks>
+  </l:side-panel>
+</j:jelly>

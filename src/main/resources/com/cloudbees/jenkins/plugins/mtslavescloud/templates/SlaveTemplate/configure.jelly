@@ -1,0 +1,21 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
+  <l:layout title="${%Configure} - ${it.displayName}" permission="${it.EXTENDED_READ}">
+    <st:include page="sidepanel.jelly"/>
+    <l:main-panel>
+      <h1>${it.displayName}</h1>
+      <f:form method="post" action="configSubmit" name="config">
+
+        <f:nested>
+          TODO
+        </f:nested>
+
+        <j:if test="${h.hasPermission(it,it.CONFIGURE)}">
+          <f:bottomButtonBar>
+            <f:submit value="${%Save}"/>
+            <f:apply/>
+          </f:bottomButtonBar>
+        </j:if>
+      </f:form>
+    </l:main-panel>
+  </l:layout>
+</j:jelly>
