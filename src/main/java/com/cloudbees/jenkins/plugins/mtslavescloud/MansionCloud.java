@@ -157,7 +157,8 @@ public class MansionCloud extends AbstractCloudImpl {
      */
     @Override
     public boolean canProvision(Label label) {
-        return SlaveTemplateList.get().get(label)!=null;
+        SlaveTemplate st = SlaveTemplateList.get().get(label);
+        return st!=null && st.isEnabled();
     }
 
     @Override
@@ -185,7 +186,7 @@ public class MansionCloud extends AbstractCloudImpl {
         LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
 
         SlaveTemplate st = SlaveTemplateList.get().get(label);
-        if (getBackOffCounter(st).isBackOffInEffect())
+        if (st==null || !st.isEnabled() || getBackOffCounter(st).isBackOffInEffect())
             return Collections.emptyList();
 
         List<PlannedNode> r = new ArrayList<PlannedNode>();
