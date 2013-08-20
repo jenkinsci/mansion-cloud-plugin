@@ -41,7 +41,7 @@
     {
         "id" : "bogus",
         "displayName" : "Bogus Type to induce an error",
-        "mansion": "bogus",
+        "mansionType": "bogus",
         "spec" : {
             "configs" : []
         }

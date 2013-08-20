@@ -10,19 +10,26 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ * {@link SlaveTemplate} for those machine types that are pre-bundled in the plugin.
+ *
+ * It offers very limited amount of configuration.
+ *
  * @author Kohsuke Kawaguchi
  */
 public class BuiltinSlaveTemplate extends SlaveTemplate {
-    @JsonProperty
     private transient String mansionType;
 
-    @JsonProperty
     private transient List<String> persistentFileSystems;
 
     private transient String spec;
 
     public BuiltinSlaveTemplate(String name) {
         super(name);
+    }
+
+    @JsonProperty
+    private void setMansionType(String t) {
+        this.mansionType = t;
     }
 
     @JsonProperty("id")
@@ -44,6 +51,12 @@ public class BuiltinSlaveTemplate extends SlaveTemplate {
     public List<String> getPersistentFileSystems() {
         return Collections.unmodifiableList(persistentFileSystems);
     }
+
+    @JsonProperty("persistentFileSystems")
+    private void setPersistentFileSystems(List<String> persistentFileSystems) {
+        this.persistentFileSystems = persistentFileSystems;
+    }
+
 
     @Override
     public JSONObject createSpec() {

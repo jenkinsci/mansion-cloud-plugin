@@ -17,6 +17,8 @@ import hudson.util.VariableResolver.ByMap;
 import jenkins.model.Jenkins;
 import jenkins.model.ModelObjectWithContextMenu;
 import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.annotate.JsonAutoDetect.Visibility;
+import org.codehaus.jackson.annotate.JsonMethod;
 import org.codehaus.jackson.map.DeserializationConfig.Feature;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.kohsuke.stapler.HttpResponse;
@@ -82,6 +84,7 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
             om.disable(Feature.AUTO_DETECT_FIELDS);
             om.disable(Feature.USE_GETTERS_AS_SETTERS);
             om.disable(Feature.AUTO_DETECT_CREATORS);
+            om.setVisibility(JsonMethod.ALL, Visibility.ANY);
 
             JsonNode dom = om.readTree(getClass().getResource("machines.json"));
             for (JsonNode def : dom.get("templates")) {
