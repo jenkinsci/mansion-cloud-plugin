@@ -79,9 +79,11 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
      */
     public MansionCloud getMansion() {
         List<MansionCloud> clouds = Jenkins.getInstance().clouds.getAll(MansionCloud.class);
-        for (MansionCloud c : clouds)
-            if (c.getAccount().equals(account))
+        for (MansionCloud c : clouds) {
+            String a = c.getAccount();
+            if (a==null || a.equals(account))   // a==null means there's only one account so there should be no restriction
                 return c;
+        }
 
         // fall back to the first one in the hope that it'll work
         return clouds.isEmpty() ? null : clouds.get(0);
