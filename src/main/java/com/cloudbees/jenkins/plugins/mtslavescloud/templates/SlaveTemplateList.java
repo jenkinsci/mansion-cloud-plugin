@@ -171,7 +171,7 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
     public SlaveTemplate get(Label label) {
         // backward compatibility
         if (label==null || label.matches(M1_SMALL) || label.matches(M1_LARGE))
-            return get("lxc-fedora17");
+            return get(M1_COMPATIBLE);
 
         for (SlaveTemplate st : templates.values()) {
             if (st.matches(label))
@@ -311,4 +311,6 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
             return name.equals("m1.large");
         }
     };
+
+    public static final String M1_COMPATIBLE = "lxc-fedora17";
 }

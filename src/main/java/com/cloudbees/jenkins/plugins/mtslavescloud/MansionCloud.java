@@ -209,7 +209,11 @@ public class MansionCloud extends AbstractCloudImpl {
                 final VirtualMachineRef vm = new BrokerRef(broker,createAccessToken(broker)).createVirtualMachine(box);
                 LOGGER.fine("Allocated "+vm.url);
 
-                r.add(new PlannedMansionSlave(label, st, vm));
+                String compat="";
+                if (st.getId().equals(SlaveTemplateList.M1_COMPATIBLE)) {
+                    compat = " m1."+box.size;
+                }
+                r.add(new PlannedMansionSlave(Jenkins.getInstance().getLabel(st.getId()+" "+box.size+compat), st, vm));
             }
         } catch (IOException e) {
             handleException(st, "Failed to provision from " + this, e);
