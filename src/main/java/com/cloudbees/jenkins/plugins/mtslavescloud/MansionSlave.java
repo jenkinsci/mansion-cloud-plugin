@@ -20,6 +20,7 @@ import jenkins.model.Jenkins;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -32,6 +33,11 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
     public static final int LEASE_RENEWAL_PERIOD_SECONDS = Integer.getInteger(MansionSlave.class.getName() + ".LEASE_RENEWAL_PERIOD_SECONDS", 30);
     private final VirtualMachineRef vm;
     private final SlaveTemplate template;
+
+    /**
+     * Keeps track of the last renewal.
+     */
+    private transient long renewalTimestamp;
 
     public MansionSlave(VirtualMachineRef vm, SlaveTemplate template, Label label, ComputerLauncher launcher) throws FormException, IOException {
         super(
@@ -82,7 +88,8 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
     private void renewLease() throws IOException {
         vm.renew();
-        LOGGER.fine("Renewed a lease of "+vm.url);
+        LOGGER.fine("Renewed a lease of " + vm.url);
+        renewalTimestamp = System.currentTimeMillis();
     }
 
     @Override
@@ -90,7 +97,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
         FileSystemClan clan = template.getClan();
         clan.update(vm.getState());
         vm.dispose();
-        listener.getLogger().println("Disposed " + vm.url);
+        listener.getLogger().println("Disposed " + vm.url+" last renewal was "+new Date(renewalTimestamp));
     }
 
     private static final Logger LOGGER = Logger.getLogger(MansionSlave.class.getName());
