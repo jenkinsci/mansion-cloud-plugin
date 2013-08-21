@@ -82,6 +82,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
     private void renewLease() throws IOException {
         vm.renew();
+        LOGGER.fine("Renewed a lease of "+vm.url);
     }
 
     @Override
