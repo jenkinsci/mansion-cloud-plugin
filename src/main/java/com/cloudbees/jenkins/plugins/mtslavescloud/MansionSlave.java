@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static hudson.Util.filter;
@@ -102,8 +103,6 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
         listener.getLogger().println("Disposed " + vm.url+" last renewal was "+new Date(renewalTimestamp));
     }
 
-    private static final Logger LOGGER = Logger.getLogger(MansionSlave.class.getName());
-
     @Extension
     public static class MansionLeaseRenewal extends AsyncPeriodicWork {
 
@@ -122,9 +121,16 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
         @Override
         protected void execute(TaskListener listener) throws IOException, InterruptedException {
             for (MansionSlave n : filter(jenkins.getNodes(), MansionSlave.class)) {
-                n.renewLease();
+                try {
+                    n.renewLease();
+                } catch (IOException e) {
+                    e.printStackTrace(listener.error("Failed to renew the lease " + n.vm.url));
+                    LOGGER.log(Level.WARNING, "Failed to renew the lease " + n.vm.url, e);
+                    // move on to the next one
+                }
             }
         }
     }
 
+    private static final Logger LOGGER = Logger.getLogger(MansionSlave.class.getName());
 }
