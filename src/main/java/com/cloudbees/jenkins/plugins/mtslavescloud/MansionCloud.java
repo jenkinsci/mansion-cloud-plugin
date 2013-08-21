@@ -215,6 +215,8 @@ public class MansionCloud extends AbstractCloudImpl {
      * If no explicit size specifier is set in the given label, this method returns "small"
      */
     private HardwareSpec getBoxOf(SlaveTemplate st, Label label) {
+        if (label==null)
+            return new HardwareSpec("small");
         if (st.matches(label,"small"))
             return new HardwareSpec("small");
         if (st.matches(label,"large"))
