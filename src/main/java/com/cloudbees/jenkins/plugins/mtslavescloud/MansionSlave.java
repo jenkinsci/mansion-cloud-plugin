@@ -24,6 +24,8 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import static hudson.Util.filter;
+
 /**
  * {@link Slave} for {@link MansionCloud}
  *
@@ -119,10 +121,8 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
         @Override
         protected void execute(TaskListener listener) throws IOException, InterruptedException {
-            for (Node n : jenkins.getNodes()) {
-                if (n instanceof MansionSlave) {
-                    ((MansionSlave)n).renewLease();
-                }
+            for (MansionSlave n : filter(jenkins.getNodes(), MansionSlave.class)) {
+                n.renewLease();
             }
         }
     }
