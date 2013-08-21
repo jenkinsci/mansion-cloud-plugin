@@ -186,8 +186,18 @@ public class MansionCloud extends AbstractCloudImpl {
         LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
 
         SlaveTemplate st = SlaveTemplateList.get().get(label);
-        if (st==null || !st.isEnabled() || getBackOffCounter(st).isBackOffInEffect())
+        if (st==null) {
+            LOGGER.fine("No slave template matching "+label);
             return Collections.emptyList();
+        }
+        if (!st.isEnabled()) {
+            LOGGER.fine("Slave template is disabled "+st);
+            return Collections.emptyList();
+        }
+        if (getBackOffCounter(st).isBackOffInEffect()) {
+            LOGGER.fine("Back off in effect for "+st);
+            return Collections.emptyList();
+        }
 
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
