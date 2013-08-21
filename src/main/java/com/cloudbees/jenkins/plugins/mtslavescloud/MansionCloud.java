@@ -231,9 +231,9 @@ public class MansionCloud extends AbstractCloudImpl {
     private HardwareSpec getBoxOf(SlaveTemplate st, Label label) {
         if (label==null)
             return new HardwareSpec("small");
-        if (st.matches(label,"small"))
+        if (st.matches(label,"small") || label.getName().equals("m1.small"))
             return new HardwareSpec("small");
-        if (st.matches(label,"large"))
+        if (st.matches(label,"large") || label.getName().equals("m1.large"))
             return new HardwareSpec("large");
 
         throw new AssertionError("Size computation problem with label: "+label);
