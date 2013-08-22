@@ -1,15 +1,12 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 
 import com.cloudbees.api.oauth.OauthClientException;
-import com.cloudbees.jenkins.plugins.mtslavescloud.*;
+import com.cloudbees.jenkins.plugins.mtslavescloud.MansionCloud;
 import com.cloudbees.mtslaves.client.SnapshotRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import hudson.AbortException;
-import hudson.Util;
-import net.sf.json.JSONObject;
 
 import java.net.URL;
-import java.util.List;
 
 /**
  * The most up-to-date snapshot that we carry over for one file system described in {@link SlaveTemplate}.
