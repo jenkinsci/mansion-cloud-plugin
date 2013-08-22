@@ -94,7 +94,7 @@ public class MansionCloud extends AbstractCloudImpl {
         }
 
         Credential obtain(TokenRequest tr) throws OauthClientException {
-            return tokenGenerator.createToken(tr).asCredential();
+            return tokenGenerator.asCredential(tr);
         }
     }
 
