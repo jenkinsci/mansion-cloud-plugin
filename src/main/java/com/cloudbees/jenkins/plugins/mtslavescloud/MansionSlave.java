@@ -101,6 +101,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
         clan.update(vm.getState());
         vm.dispose();
         listener.getLogger().println("Disposed " + vm.url+" last renewal was "+new Date(renewalTimestamp));
+        LOGGER.log(Level.INFO, "Disposed " + vm.url+" last renewal was "+new Date(renewalTimestamp));
     }
 
     @Extension
