@@ -149,92 +149,99 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      * When this method returns we have a connected slave.
      */
     public Node call() throws Exception {
-        status = "Configuring";
+        final String oldName = Thread.currentThread().getName();
+        Thread.currentThread().setName(oldName+" : provisioning "+vm.url);
 
-        final VirtualMachineSpec spec = new VirtualMachineSpec();
-        for (MansionVmConfigurator configurator : MansionVmConfigurator.all()) {
-            configurator.configure(cloud,label,spec);
-        }
-        st.populate(spec);
-
-
-        // we need an SSH key pair to securely login to the allocated slave, but it does't matter what key to use.
-        // so just reuse the Jenkins instance identity for a convenience, since this key is readily available,
-        // and its private key is hidden to the master.
-        InstanceIdentity id = InstanceIdentity.get();
-        String publicKey = encodePublicKey(id);
-
-        final SSHUserPrivateKey sshCred = new BasicSSHUserPrivateKey(null,null, JENKINS_USER,
-                new DirectEntryPrivateKeySource(encodePrivateKey(id)),null,null);
-
-        spec.sshd(JENKINS_USER, 15000, publicKey.trim()); // TODO: should UID be configurable?
         try {
-            VirtualMachineSpec specWithSnapshots = spec.clone();
-            FileSystemClan fileSystemClan = st.getClan();
-            fileSystemClan.applyTo(specWithSnapshots);    // if we have more up-to-date snapshots, use them
-            vm.setup(specWithSnapshots);
-        } catch (VirtualMachineConfigurationException e) {
-            LOGGER.log(WARNING, "Couldn't find snapshot, trying with originals",e);
-            //TODO: we should try to figure out which snapshot to revert
-            //TODO: instead of reverting them all
-            try {
-                vm.setup(spec);
-            } catch (VirtualMachineConfigurationException e2) {
-                throw new IOException2("Failed to configure VM", e2);
+            status = "Configuring";
+
+            final VirtualMachineSpec spec = new VirtualMachineSpec();
+            for (MansionVmConfigurator configurator : MansionVmConfigurator.all()) {
+                configurator.configure(cloud,label,spec);
             }
-        }
+            st.populate(spec);
 
-        if (INJECT_FAULT)
-            throw new IllegalStateException("Injected failure");
 
-        status = "Booting";
-        vm.bootSync();
-        LOGGER.fine("Booted " + vm.url);
+            // we need an SSH key pair to securely login to the allocated slave, but it does't matter what key to use.
+            // so just reuse the Jenkins instance identity for a convenience, since this key is readily available,
+            // and its private key is hidden to the master.
+            InstanceIdentity id = InstanceIdentity.get();
+            String publicKey = encodePublicKey(id);
 
-        status = "Connecting";
-        SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
-        SSHLauncher launcher = new SSHLauncher(
-                // Linux slaves can run without it, but OS X slaves need java.awt.headless=true
-                sshd.getHost(), sshd.getPort(), sshCred, "-Djava.awt.headless=true", null, null, null);
-        MansionSlave s = new MansionSlave(vm,st,label,launcher);
-        IOException lastConnectionException = null;
-        try {
-            // connect before we declare victory
-            // If we declare
-            // the provisioning complete by returning without the connect
-            // operation, NodeProvisioner may decide that it still wants
-            // one more instance, because it sees that (1) all the slaves
-            // are offline (because it's still being launched) and
-            // (2) there's no capacity provisioned yet.
-            //
-            // deferring the completion of provisioning until the launch
-            // goes successful prevents this problem.
-            Jenkins.getInstance().addNode(s);
-            for (int tries = 1; tries <= 10; tries ++) {
-                if (tries>1)
-                    status = "Connecting #"+tries;
-                Thread.sleep(500);
+            final SSHUserPrivateKey sshCred = new BasicSSHUserPrivateKey(null,null, JENKINS_USER,
+                    new DirectEntryPrivateKeySource(encodePrivateKey(id)),null,null);
+
+            spec.sshd(JENKINS_USER, 15000, publicKey.trim()); // TODO: should UID be configurable?
+            try {
+                VirtualMachineSpec specWithSnapshots = spec.clone();
+                FileSystemClan fileSystemClan = st.getClan();
+                fileSystemClan.applyTo(specWithSnapshots);    // if we have more up-to-date snapshots, use them
+                vm.setup(specWithSnapshots);
+            } catch (VirtualMachineConfigurationException e) {
+                LOGGER.log(WARNING, "Couldn't find snapshot, trying with originals",e);
+                //TODO: we should try to figure out which snapshot to revert
+                //TODO: instead of reverting them all
                 try {
-                    s.toComputer().connect(false).get();
-                    break;
-                } catch (ExecutionException e) {
-                    if (! (e.getCause() instanceof IOException))
-                        throw e;
-                    else
-                        lastConnectionException = (IOException) e.getCause();
+                    vm.setup(spec);
+                } catch (VirtualMachineConfigurationException e2) {
+                    throw new IOException2("Failed to configure VM", e2);
                 }
             }
+
+            if (INJECT_FAULT)
+                throw new IllegalStateException("Injected failure");
+
+            status = "Booting";
+            vm.bootSync();
+            LOGGER.fine("Booted " + vm.url);
+
+            status = "Connecting";
+            SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
+            SSHLauncher launcher = new SSHLauncher(
+                    // Linux slaves can run without it, but OS X slaves need java.awt.headless=true
+                    sshd.getHost(), sshd.getPort(), sshCred, "-Djava.awt.headless=true", null, null, null);
+            MansionSlave s = new MansionSlave(vm,st,label,launcher);
+            IOException lastConnectionException = null;
+            try {
+                // connect before we declare victory
+                // If we declare
+                // the provisioning complete by returning without the connect
+                // operation, NodeProvisioner may decide that it still wants
+                // one more instance, because it sees that (1) all the slaves
+                // are offline (because it's still being launched) and
+                // (2) there's no capacity provisioned yet.
+                //
+                // deferring the completion of provisioning until the launch
+                // goes successful prevents this problem.
+                Jenkins.getInstance().addNode(s);
+                for (int tries = 1; tries <= 10; tries ++) {
+                    if (tries>1)
+                        status = "Connecting #"+tries;
+                    Thread.sleep(500);
+                    try {
+                        s.toComputer().connect(false).get();
+                        break;
+                    } catch (ExecutionException e) {
+                        if (! (e.getCause() instanceof IOException))
+                            throw e;
+                        else
+                            lastConnectionException = (IOException) e.getCause();
+                    }
+                }
+            } finally {
+                s.cancelHoldOff();
+            }
+
+            if (s.toComputer().isOffline()) {
+                // if we can't connect, backoff before the next try
+                throw new IOException2("Failed to connect to slave over ssh", lastConnectionException);
+            }
+
+            status = "Online";
+            return s;
         } finally {
-            s.cancelHoldOff();
+            Thread.currentThread().setName(oldName);
         }
-
-        if (s.toComputer().isOffline()) {
-            // if we can't connect, backoff before the next try
-            throw new IOException2("Failed to connect to slave over ssh", lastConnectionException);
-        }
-
-        status = "Online";
-        return s;
     }
 
     // TODO: move this to instance-identity-module
