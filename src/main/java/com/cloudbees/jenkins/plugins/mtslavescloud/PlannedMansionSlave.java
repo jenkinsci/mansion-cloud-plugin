@@ -214,12 +214,13 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
                 // deferring the completion of provisioning until the launch
                 // goes successful prevents this problem.
                 Jenkins.getInstance().addNode(s);
-                for (int tries = 1; tries <= 10; tries ++) {
+                for (int tries = 1; tries <= 10; tries++) {
                     if (tries>1)
                         status = "Connecting #"+tries;
                     Thread.sleep(500);
                     try {
-                        s.toComputer().connect(false).get();
+                        // set some time out to avoid infinite blockage, which was observed during test
+                        s.toComputer().connect(false).get(5,TimeUnit.MINUTES);
                         break;
                     } catch (ExecutionException e) {
                         if (! (e.getCause() instanceof IOException))
