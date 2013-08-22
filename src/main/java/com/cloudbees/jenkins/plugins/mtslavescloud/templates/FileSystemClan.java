@@ -61,6 +61,17 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
         for (FileSystemLineage l : lineages) {
             if (l.getPath().equals(fsl.getPath())) {
                 lineages.remove(l);
+
+                // since we will be forgetting about this snapshot, tell mansion that it can be gone now
+                try {
+                    SnapshotRef ref = l.getRef(cloud);
+                    ref.dispose();
+                    LOGGER.info("Disposed snapshot "+ref.url);
+                } catch (IOException e) {
+                    LOGGER.log(WARNING, "Failed to dispose "+l.getSnapshot(),e);
+                } catch (OauthClientException e) {
+                    LOGGER.log(WARNING, "Failed to dispose "+l.getSnapshot(),e);
+                }
                 break;
             }
         }
