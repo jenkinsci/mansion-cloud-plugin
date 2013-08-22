@@ -83,6 +83,11 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
 
     private volatile boolean dismissed;
 
+    /**
+     * When did we start provisioning this guy?
+     */
+    public final long startTime = System.currentTimeMillis();
+
 
     public PlannedMansionSlave(Label label, SlaveTemplate template, VirtualMachineRef vm) {
         super(vm.getId(), new PromisedFuture<Node>(), 1);
