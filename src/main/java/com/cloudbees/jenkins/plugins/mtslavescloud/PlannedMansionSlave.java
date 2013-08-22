@@ -24,6 +24,7 @@ import hudson.util.TimeUnit2;
 import jenkins.model.Jenkins;
 import org.acegisecurity.GrantedAuthority;
 import org.bouncycastle.openssl.PEMWriter;
+import org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement;
 import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.interceptor.RequirePOST;
@@ -148,6 +149,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      *
      * When this method returns we have a connected slave.
      */
+    @IgnoreJRERequirement
     public Node call() throws Exception {
         final String oldName = Thread.currentThread().getName();
         Thread.currentThread().setName(oldName+" : provisioning "+vm.url);
