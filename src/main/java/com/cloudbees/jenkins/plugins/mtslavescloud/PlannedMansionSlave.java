@@ -266,6 +266,11 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
         return "ssh-rsa " + hudson.remoting.Base64.encode(RSASHA1Verify.encodeSSHRSAPublicKey(new RSAPublicKey(key.getPublicExponent(), key.getModulus())));
     }
 
+    /*package*/ void renewLease() throws IOException {
+        vm.renew();
+        LOGGER.fine("Renewed a lease of " + vm.url);
+    }
+
     @Override
     public void spent() {
         spent = System.currentTimeMillis();

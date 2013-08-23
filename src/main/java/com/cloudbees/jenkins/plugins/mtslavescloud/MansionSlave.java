@@ -130,6 +130,17 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
                     // move on to the next one
                 }
             }
+            for (MansionCloud c : filter(jenkins.clouds, MansionCloud.class)) {
+                for (PlannedMansionSlave s : c.getInProgressSet()) {
+                    try {
+                        s.renewLease();
+                    } catch (IOException e) {
+                        e.printStackTrace(listener.error("Failed to renew the lease " + s.getVm().url));
+                        LOGGER.log(Level.WARNING, "Failed to renew the lease " + s.getVm().url, e);
+                        // move on to the next one
+                    }
+                }
+            }
         }
     }
 
