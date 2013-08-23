@@ -27,6 +27,7 @@ public class CloudSlaveRetentionstrategy<T extends Computer> extends RetentionSt
     public long check(T c) {
         if (!c.isConnecting() && c.isAcceptingTasks()) {
             if (isIdleForTooLong(c)) {
+                LOGGER.log(Level.FINE,"Removing {0} due to idleness",c.getName());
                 try {
                     Node n = c.getNode();
                     if (n!=null)    // rare, but n==null if the node is deleted and being checked roughly at the same time
