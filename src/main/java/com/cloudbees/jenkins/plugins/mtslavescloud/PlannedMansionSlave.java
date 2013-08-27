@@ -241,7 +241,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
 
             if (s.toComputer().isOffline()) {
                 // if we can't connect, backoff before the next try
-                throw new IOException2("Failed to connect to slave over ssh", lastConnectionException);
+                throw new IOException2("Failed to connect to slave over ssh:\nLog text:\n"+getSlaveLog(s), lastConnectionException);
             }
 
             status = "Online";
