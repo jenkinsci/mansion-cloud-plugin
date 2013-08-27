@@ -229,6 +229,10 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
                             throw e;
                         else
                             lastConnectionException = (IOException) e.getCause();
+                        LOGGER.log(INFO, "Failed to connect to slave over ssh (try #" + tries + ")", e);
+                        LOGGER.log(INFO,"Launcher log:\n"+ getSlaveLog(s));
+                    } catch (TimeoutException e) {
+                        throw new IOException("Failed to connect to slave over ssh (try #"+tries+")\nLauncher log:\n"+getSlaveLog(s));
                     }
                 }
             } finally {
@@ -245,6 +249,13 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
         } finally {
             Thread.currentThread().setName(oldName);
         }
+    }
+
+    private String getSlaveLog(MansionSlave s) throws IOException {
+        if (s==null)    return "(null slave)";
+        Computer c = s.toComputer();
+        if (c==null)    return "(null computer)";
+        return c.getLog();
     }
 
     // TODO: move this to instance-identity-module
