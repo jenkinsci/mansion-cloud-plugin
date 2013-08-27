@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
@@ -220,9 +221,10 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
                     if (tries>1)
                         status = "Connecting #"+tries;
                     Thread.sleep(500);
+                    Future<?> connect = s.toComputer().connect(false);
                     try {
                         // set some time out to avoid infinite blockage, which was observed during test
-                        s.toComputer().connect(false).get(5,TimeUnit.MINUTES);
+                        connect.get(5, TimeUnit.MINUTES);
                         break;
                     } catch (ExecutionException e) {
                         if (! (e.getCause() instanceof IOException))
@@ -232,6 +234,9 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
                         LOGGER.log(INFO, "Failed to connect to slave over ssh (try #" + tries + ")", e);
                         LOGGER.log(INFO,"Launcher log:\n"+ getSlaveLog(s));
                     } catch (TimeoutException e) {
+                        // connect is likely hanging. Don't let it linger forever. Just kill it
+                        connect.cancel(true);
+
                         throw new IOException("Failed to connect to slave over ssh (try #"+tries+")\nLauncher log:\n"+getSlaveLog(s));
                     }
                 }
