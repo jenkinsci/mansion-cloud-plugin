@@ -8,6 +8,7 @@ import hudson.model.Executor;
 import hudson.model.Node;
 import hudson.model.Slave;
 import hudson.plugins.sshslaves.SSHLauncher;
+import hudson.slaves.OfflineCause;
 import hudson.util.TimeUnit2;
 import jenkins.model.Jenkins;
 
@@ -16,6 +17,24 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class MansionRetentionStrategy <T extends MansionComputer> extends CloudSlaveRetentionstrategy<T> {
+
+    @Override
+    public long check(T c) {
+        long nextCheck = super.check(c);
+
+        if (c.isOffline() && c.getOfflineCause() instanceof OfflineCause.ChannelTermination) {
+            //take offline without syncing
+            try {
+                MansionSlave node = c.getNode();
+                if (node!=null)    // rare, but n==null if the node is deleted and being checked roughly at the same time
+                    super.kill(node);
+            } catch (IOException e) {
+                LOGGER.warning("Failed to take slave offline: " + c.getName());
+            }
+        }
+
+        return nextCheck;
+    }
 
     /**
      * For mansion, we may need to rsync if Swarm is loaded. Otherwise, we just remove the slave.
