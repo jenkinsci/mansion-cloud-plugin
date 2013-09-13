@@ -9,7 +9,7 @@
 
       <f:form method="post" action="configSubmit" name="config">
 
-        <f:entry field="id" title="${%Label}">
+        <f:entry field="label" title="${%Label}">
           <f:readOnlyTextbox />
         </f:entry>
 
