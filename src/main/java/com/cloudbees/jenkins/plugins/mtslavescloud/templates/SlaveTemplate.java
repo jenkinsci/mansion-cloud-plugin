@@ -35,7 +35,10 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
         super(SlaveTemplateList.get(), name);
     }
 
-    public final String getId() {
+    /**
+     * Nodes provisioned from this template will have this label.
+     */
+    public final String getLabel() {
         return getName();
     }
 
@@ -97,7 +100,7 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
     public boolean matches(Label label) {
         return label.matches(new VariableResolver<Boolean>() {
             public Boolean resolve(String name) {
-                return name.equals(getId()) || name.equals("small") || name.equals("large");
+                return name.equals(getLabel()) || name.equals("small") || name.equals("large");
             }
         });
     }
@@ -108,7 +111,7 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
     public boolean matches(Label label, final String size) {
         return label.matches(new VariableResolver<Boolean>() {
             public Boolean resolve(String name) {
-                return name.equals(getId()) || name.equals(size);
+                return name.equals(getLabel()) || name.equals(size);
             }
         });
     }

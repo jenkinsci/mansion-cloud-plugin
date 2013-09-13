@@ -14,9 +14,10 @@ import javax.servlet.ServletException;
 public class LocalSlaveTemplate extends SlaveTemplate {
     private String mansionType;
     private String definition;
+    private String label;
 
-    public LocalSlaveTemplate(String name) {
-        super(name);
+    public LocalSlaveTemplate(String displayName) {
+        super(displayName);
     }
 
     public String getDefinition() {

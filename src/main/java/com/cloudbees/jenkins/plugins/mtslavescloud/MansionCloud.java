@@ -210,10 +210,10 @@ public class MansionCloud extends AbstractCloudImpl {
                 LOGGER.fine("Allocated "+vm.url);
 
                 String compat="";
-                if (st.getId().equals(SlaveTemplateList.M1_COMPATIBLE)) {
+                if (st.getLabel().equals(SlaveTemplateList.M1_COMPATIBLE)) {
                     compat = " m1."+box.size;
                 }
-                r.add(new PlannedMansionSlave(Jenkins.getInstance().getLabel(st.getId()+" "+box.size+compat), st, vm));
+                r.add(new PlannedMansionSlave(Jenkins.getInstance().getLabel(st.getLabel()+" "+box.size+compat), st, vm));
             }
         } catch (IOException e) {
             handleException(st, "Failed to provision from " + this, e);
