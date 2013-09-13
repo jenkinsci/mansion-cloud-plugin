@@ -9,6 +9,10 @@
 
       <f:form method="post" action="configSubmit" name="config">
 
+        <f:entry field="displayName" title="${%Display Name}">
+          <f:textbox />
+        </f:entry>
+
         <f:entry field="label" title="${%Label}">
           <f:readOnlyTextbox />
         </f:entry>

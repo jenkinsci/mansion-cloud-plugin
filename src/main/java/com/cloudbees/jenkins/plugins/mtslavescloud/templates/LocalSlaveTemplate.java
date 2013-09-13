@@ -1,6 +1,7 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 
 import hudson.Extension;
+import hudson.Util;
 import hudson.model.Descriptor.FormException;
 import net.sf.json.JSONObject;
 
@@ -14,7 +15,6 @@ import javax.servlet.ServletException;
 public class LocalSlaveTemplate extends SlaveTemplate {
     private String mansionType;
     private String definition;
-    private String label;
 
     public LocalSlaveTemplate(String displayName) {
         super(displayName);

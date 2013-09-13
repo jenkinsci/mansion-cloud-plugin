@@ -150,6 +150,7 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
     protected void submit(JSONObject json) throws ServletException, Descriptor.FormException {
         this.disabled = !json.has("enabled");
         this.account = json.optString("account");
+        this.displayName = json.optString("displayName");
     }
 
 
