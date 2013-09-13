@@ -6,5 +6,8 @@
     <f:entry field="definition" title="${%Definition}">
       <f:textarea />
     </f:entry>
+    <f:entry field="persistentFileSystemsStr" title="${%Persistent File Systems}">
+      <f:textarea />
+    </f:entry>
   </f:section>
 </j:jelly>

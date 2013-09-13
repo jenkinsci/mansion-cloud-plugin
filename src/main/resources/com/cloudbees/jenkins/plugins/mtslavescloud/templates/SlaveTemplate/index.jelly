@@ -9,7 +9,7 @@
       <!-- label cloud -->
       <div>
         ${%Label:}
-        <a class="model-link" href="${rootURL}/label/${it.id}">${it.id}</a>
+        <a class="model-link" href="${rootURL}/label/${it.label}">${it.label}</a>
       </div>
 
       <j:set var="clan" value="${it.clan}"/>
