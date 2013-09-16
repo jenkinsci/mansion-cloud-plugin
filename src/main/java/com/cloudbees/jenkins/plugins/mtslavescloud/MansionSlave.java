@@ -121,25 +121,33 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
         @Override
         protected void execute(TaskListener listener) throws IOException, InterruptedException {
-            for (MansionSlave n : filter(jenkins.getNodes(), MansionSlave.class)) {
-                try {
-                    n.renewLease();
-                } catch (IOException e) {
-                    e.printStackTrace(listener.error("Failed to renew the lease " + n.vm.url));
-                    LOGGER.log(Level.WARNING, "Failed to renew the lease " + n.vm.url, e);
-                    // move on to the next one
-                }
-            }
-            for (MansionCloud c : filter(jenkins.clouds, MansionCloud.class)) {
-                for (PlannedMansionSlave s : c.getInProgressSet()) {
+
+            String originalThreadName = Thread.currentThread().getName();
+            try {
+                for (MansionSlave n : filter(jenkins.getNodes(), MansionSlave.class)) {
                     try {
-                        s.renewLease();
+                        Thread.currentThread().setName(originalThreadName + " - renewing " + n.vm.getId());
+                        n.renewLease();
                     } catch (IOException e) {
-                        e.printStackTrace(listener.error("Failed to renew the lease " + s.getVm().url));
-                        LOGGER.log(Level.WARNING, "Failed to renew the lease " + s.getVm().url, e);
+                        e.printStackTrace(listener.error("Failed to renew the lease " + n.vm.url));
+                        LOGGER.log(Level.WARNING, "Failed to renew the lease " + n.vm.url, e);
                         // move on to the next one
                     }
                 }
+                for (MansionCloud c : filter(jenkins.clouds, MansionCloud.class)) {
+                    for (PlannedMansionSlave s : c.getInProgressSet()) {
+                        try {
+                            Thread.currentThread().setName(originalThreadName + " - renewing " + s.getVm().getId());
+                            s.renewLease();
+                        } catch (IOException e) {
+                            e.printStackTrace(listener.error("Failed to renew the lease " + s.getVm().url));
+                            LOGGER.log(Level.WARNING, "Failed to renew the lease " + s.getVm().url, e);
+                            // move on to the next one
+                        }
+                    }
+                }
+            } finally {
+                Thread.currentThread().setName(originalThreadName);
             }
         }
     }
