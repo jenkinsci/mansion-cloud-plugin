@@ -221,7 +221,10 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
                     if (tries>1)
                         status = "Connecting #"+tries;
                     Thread.sleep(500);
-                    Future<?> connect = s.toComputer().connect(false);
+                    Computer c = s.toComputer();
+                    if (c==null)
+                        throw new IOException("Failed to connect to slave. Computer is gone");
+                    Future<?> connect = c.connect(false);
                     try {
                         // set some time out to avoid infinite blockage, which was observed during test
                         connect.get(5, TimeUnit.MINUTES);
