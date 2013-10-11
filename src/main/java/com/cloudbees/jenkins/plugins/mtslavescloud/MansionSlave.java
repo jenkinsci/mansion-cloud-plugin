@@ -97,11 +97,21 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
-        FileSystemClan clan = template.getClan();
-        clan.update(vm.getState());
-        vm.dispose();
-        listener.getLogger().println("Disposed " + vm.url+" last renewal was "+new Date(renewalTimestamp));
-        LOGGER.log(Level.INFO, "Disposed " + vm.url+" last renewal was "+new Date(renewalTimestamp));
+        try {
+            FileSystemClan clan = template.getClan();
+            clan.update(vm.getState());
+        } catch (IOException e) {
+            e.printStackTrace(listener.error("Failed to update the file system clan"));
+            LOGGER.log(Level.INFO, "Failed to update the file system clan", e);
+        }
+        try {
+            vm.dispose();
+            listener.getLogger().println("Disposed " + vm.url+" last renewal was "+new Date(renewalTimestamp));
+            LOGGER.log(Level.INFO, "Disposed " + vm.url+" last renewal was "+new Date(renewalTimestamp));
+        } catch (IOException e) {
+            e.printStackTrace(listener.error("Failed to dispose "+vm.url));
+            LOGGER.log(Level.INFO, "Failed to dispose "+vm.url, e);
+        }
     }
 
     @Extension
