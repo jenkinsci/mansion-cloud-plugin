@@ -7,7 +7,7 @@
             "configs" : [
                 {
                     "type" : "fileSystem",
-                    "fileSystem" : "http://localhost:8080/zfs/f17-base",
+                    "fileSystem" : "http://localhost:8080/zfs/fedora17",
                     "path" : "/"
                 },
                 {
