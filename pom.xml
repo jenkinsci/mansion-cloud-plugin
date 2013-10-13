@@ -13,6 +13,12 @@
   <packaging>hpi</packaging>
   <name>Mansion Cloud Plugin</name>
 
+  <scm>
+    <connection>scm:git:git://git.cloudbees.com/cloudbees/mansion-cloud-plugin.git</connection>
+    <developerConnection>scm:git:ssh://git@git.cloudbees.com/cloudbees/mansion-cloud-plugin.git</developerConnection>
+    <url>https://forge.cloudbees.com/a/cloudbees/repositories/mansion-cloud-plugin</url>
+  </scm>
+
   <dependencies>
     <dependency><!-- work around JENKINS-13754 -->
       <groupId>org.kohsuke.stapler</groupId>
