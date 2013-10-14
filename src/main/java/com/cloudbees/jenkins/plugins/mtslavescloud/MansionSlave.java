@@ -15,6 +15,7 @@ import hudson.slaves.AbstractCloudSlave;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.EphemeralNode;
 import hudson.slaves.NodeProperty;
+import hudson.util.TimeUnit2;
 import jenkins.model.Jenkins;
 
 import javax.inject.Inject;
@@ -95,6 +96,14 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
         renewalTimestamp = System.currentTimeMillis();
     }
 
+    /**
+     * If we have failed to renew for an extended period of time,
+     * the mansion would have disposed the machine, so we should give it up, too.
+     */
+    private boolean isNotRenewedForTooLong() {
+        return System.currentTimeMillis()-renewalTimestamp > TimeUnit2.MINUTES.toMillis(30);
+    }
+
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         try {
@@ -141,6 +150,13 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
                     } catch (IOException e) {
                         e.printStackTrace(listener.error("Failed to renew the lease " + n.vm.url));
                         LOGGER.log(Level.WARNING, "Failed to renew the lease " + n.vm.url, e);
+
+                        if (n.isNotRenewedForTooLong()) {
+                            // if we miss the renewal once or twice we can still recover from it,
+                            // but if we can't renew for too long, then we do know that the mansion
+                            // gets rid of the lease. So at that point, there's no use trying.
+                            n.terminate();
+                        }
                         // move on to the next one
                     }
                 }
