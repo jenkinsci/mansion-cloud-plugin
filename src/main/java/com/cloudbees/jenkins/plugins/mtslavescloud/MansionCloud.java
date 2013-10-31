@@ -110,6 +110,10 @@ public class MansionCloud extends AbstractCloudImpl {
      */
     private transient Exception lastException;
 
+    public MansionCloud(URL broker) throws IOException {
+        this(broker,null,null);
+    }
+
     @DataBoundConstructor
     public MansionCloud(URL broker, String account, List<MansionCloudProperty> properties) throws IOException {
         super("mansion" + Util.getDigestOf(broker.toExternalForm()).substring(0, 8), "0"/*unused*/);
