@@ -6,6 +6,7 @@ import hudson.Util;
 import hudson.cli.CLICommand;
 import jenkins.model.Jenkins;
 import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
 
 import java.net.URL;
 
@@ -21,6 +22,9 @@ public class InstallMansionCommand extends CLICommand {
 
     @Argument(metaVar="BROKER_URL",usage="Broker URL")
     public URL url;
+
+    @Option(name="-account",usage="Specify the account if the instance has multiple credentials configured with it")
+    public String account;
 
     @Override
     public String getShortDescription() {
@@ -39,7 +43,7 @@ public class InstallMansionCommand extends CLICommand {
             }
         }
 
-        j.clouds.add(new MansionCloud(url));
+        j.clouds.add(new MansionCloud(url,account,null));
         return 0;
     }
 }
