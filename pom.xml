@@ -3,8 +3,7 @@
   <parent>
     <groupId>com.cloudbees.jenkins.plugins</groupId>
     <artifactId>jenkins-plugins</artifactId>
-    <version>4</version>
-    <relativePath />
+    <version>16</version>
   </parent>
 
   <groupId>com.cloudbees.jenkins.plugins</groupId>
@@ -133,7 +132,6 @@
       <plugin>
         <groupId>org.jenkins-ci.tools</groupId>
         <artifactId>maven-hpi-plugin</artifactId>
-        <version>1.96</version>
         <configuration>
           <systemProperties>
             <!-- NodeProvisioner runs x100 the normal speed (which is 10000) to reduce the delay till the provisioning attempt -->
