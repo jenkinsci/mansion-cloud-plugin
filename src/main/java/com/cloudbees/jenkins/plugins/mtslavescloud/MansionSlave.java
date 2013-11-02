@@ -47,7 +47,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
         super(
                 massageId(vm),
                 "Virtual machine provisioned from "+vm.url,
-                "/scratch/jenkins", // TODO:
+                template.getMansionType().equals("win") ? "c:\\scratch\\jenkins" : "/scratch/jenkins",
                 1,
                 Mode.NORMAL,
                 label == null ? "" : label.getDisplayName(),
