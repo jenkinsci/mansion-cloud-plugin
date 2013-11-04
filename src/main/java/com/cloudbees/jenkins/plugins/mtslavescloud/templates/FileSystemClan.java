@@ -5,6 +5,7 @@ import com.cloudbees.jenkins.plugins.mtslavescloud.MansionCloud;
 import com.cloudbees.mtslaves.client.FileSystemRef;
 import com.cloudbees.mtslaves.client.SnapshotRef;
 import com.cloudbees.mtslaves.client.VirtualMachine;
+import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.FileSystemsProperty;
 import hudson.XmlFile;
@@ -18,6 +19,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.*;
@@ -26,6 +28,7 @@ import static java.util.logging.Level.*;
  * A set of {@link FileSystemLineage}s that are used together for a single {@link SlaveTemplate}.
  *
  * @author Kohsuke Kawaguchi
+ * @author Ryan Campbell
  */
 public class FileSystemClan implements Iterable<FileSystemLineage> {
     private final MansionCloud cloud;
@@ -57,25 +60,25 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
         return new XmlFile(new File(template.getRootDir(),"clan.xml"));
     }
 
-    public void add(FileSystemLineage fsl) {
-        for (FileSystemLineage l : lineages) {
-            if (l.getPath().equals(fsl.getPath())) {
-                lineages.remove(l);
+    public void add(FileSystemLineage newFsl) {
+        for (FileSystemLineage existingFsl : lineages) {
+            if (newFsl.osbsoletes(existingFsl)) {
+                lineages.remove(existingFsl);
 
                 // since we will be forgetting about this snapshot, tell mansion that it can be gone now
                 try {
-                    SnapshotRef ref = l.getRef(cloud);
+                    SnapshotRef ref = existingFsl.getRef(cloud);
                     ref.dispose();
                     LOGGER.info("Disposed snapshot "+ref.url);
                 } catch (IOException e) {
-                    LOGGER.log(WARNING, "Failed to dispose "+l.getSnapshot(),e);
+                    LOGGER.log(WARNING, "Failed to dispose "+existingFsl.getSnapshot(),e);
                 } catch (OauthClientException e) {
-                    LOGGER.log(WARNING, "Failed to dispose "+l.getSnapshot(),e);
+                    LOGGER.log(WARNING, "Failed to dispose "+existingFsl.getSnapshot(),e);
                 }
                 break;
             }
         }
-        lineages.add(fsl);
+        lineages.add(newFsl);
     }
 
     public void load() throws IOException {
@@ -89,9 +92,9 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
         getPersistentFileSystemRecordFile().write(this);
     }
 
-    public void applyTo(VirtualMachineSpec spec) {
+    public void applyTo(VirtualMachineSpec spec, VirtualMachineRef vm) {
         for (FileSystemLineage e : this) {
-            e.applyTo(spec);
+            e.applyTo(spec,vm);
         }
     }
 
@@ -130,8 +133,14 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
     @RequirePOST
     public HttpResponse doDispose() throws IOException, OauthClientException {
         template.checkPermission(SlaveTemplate.CONFIGURE);
-        for (FileSystemLineage e : this) {
-            e.getRef(cloud).dispose();
+        for (FileSystemLineage l: this) {
+            try {
+                l.getRef(cloud).dispose();
+            } catch (IOException ioe) {
+                LOGGER.log(Level.WARNING, "Failed to delete snapshot " +l.getSnapshot(),ioe);
+            } catch (OauthClientException oce) {
+                LOGGER.log(Level.WARNING, "Failed to delete snapshot " +l.getSnapshot(), oce);
+            }
         }
         getPersistentFileSystemRecordFile().delete();
         return HttpResponses.forwardToPreviousPage();

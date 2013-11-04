@@ -3,6 +3,7 @@ package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 import com.cloudbees.api.oauth.OauthClientException;
 import com.cloudbees.jenkins.plugins.mtslavescloud.MansionCloud;
 import com.cloudbees.mtslaves.client.SnapshotRef;
+import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import hudson.AbortException;
 
@@ -50,11 +51,22 @@ public class FileSystemLineage {
         return snapshot;
     }
 
-    void applyTo(VirtualMachineSpec spec) {
-        spec.fs(snapshot,path);
+    void applyTo(VirtualMachineSpec spec, VirtualMachineRef vm) {
+        if (snapshot.getHost().equals(vm.url.getHost()))
+            spec.fs(snapshot,path);
     }
 
     SnapshotRef getRef(MansionCloud mansion) throws AbortException, OauthClientException {
         return new SnapshotRef(snapshot,mansion.createAccessToken(snapshot));
+    }
+
+    /**
+     * Tests whether an existing snapshot can be logically destroyed.
+     *
+     * @param other
+     * @return true if the other can be safely destroyed.
+     */
+    public boolean osbsoletes(FileSystemLineage other) {
+        return other.path.equals(this.path) && other.snapshot.getHost().equals(this.snapshot.getHost());
     }
 }

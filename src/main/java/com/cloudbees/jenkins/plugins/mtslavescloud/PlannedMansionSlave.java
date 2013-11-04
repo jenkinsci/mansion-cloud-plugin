@@ -178,7 +178,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
             try {
                 VirtualMachineSpec specWithSnapshots = spec.clone();
                 FileSystemClan fileSystemClan = st.getClan();
-                fileSystemClan.applyTo(specWithSnapshots);    // if we have more up-to-date snapshots, use them
+                fileSystemClan.applyTo(specWithSnapshots, vm);    // if we have more up-to-date snapshots, use them
                 vm.setup(specWithSnapshots);
             } catch (VirtualMachineConfigurationException e) {
                 LOGGER.log(WARNING, "Couldn't find snapshot, trying with originals",e);
