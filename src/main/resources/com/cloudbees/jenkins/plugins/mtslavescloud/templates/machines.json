@@ -16,11 +16,6 @@
                     "path" : "/tmp"
                 },
                 {
-                    "type" : "fileSystem",
-                    "fileSystem" : "http://localhost:8080/zfs/linux-swap",
-                    "path" : "/swap"
-                },
-                {
                     "type" : "lxcNetwork",
                     "hostname" : "jenkins"
                 }
