@@ -286,7 +286,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
     }
 
     /*package*/ void renewLease() throws IOException {
-        if (problem != null) {
+        if (problem == null) {
             vm.renew();
             LOGGER.fine("Renewed a lease of " + vm.url);
         }
