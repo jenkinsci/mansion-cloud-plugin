@@ -62,6 +62,8 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
                         SSHLauncher launcher = (SSHLauncher) slave.getLauncher();
                         SSHUserPrivateKey key = (SSHUserPrivateKey) launcher.getCredentials();
                         storage.sync(slave, launcher, key);
+                    } catch (Throwable t) {
+                        LOGGER.log(Level.SEVERE, "Failed to sync slave", t);
                     } finally {
 
                         // attempt to heuristically detect a race condition
