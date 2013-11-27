@@ -239,7 +239,8 @@ public class MansionCloud extends AbstractCloudImpl {
             return new HardwareSpec("small");
         if (st.matches(label,"large") || label.getName().equals("m1.large"))
             return new HardwareSpec("large");
-
+        if (st.matches(label,"xlarge"))
+            return new HardwareSpec("xlarge");
         throw new AssertionError("Size computation problem with label: "+label);
     }
 
