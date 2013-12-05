@@ -36,6 +36,11 @@
                 },
                 {
                     "type" : "fileSystem",
+                    "fileSystem" : "http://localhost:8080/zfs/osx-opt",
+                    "path" : "/opt"
+                },
+                {
+                    "type" : "fileSystem",
                     "fileSystem" : "http://localhost:8080/zfs/empty",
                     "path" : "/scratch/jenkins"
                 }
