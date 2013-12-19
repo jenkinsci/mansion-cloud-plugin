@@ -22,11 +22,6 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
     private final MansionSlave slave;
 
     /**
-     * We want to suspend jobs while rsyncing, but keep the computer online.
-     */
-    boolean acceptingTasks = true;
-
-    /**
      * When the computer finished connecting. Milliseconds since epoch.
      */
     private Long launchedTime;
@@ -74,11 +69,6 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
         } catch (InterruptedException e) {
             LOGGER.log(Level.WARNING, "Failed to terminate " + getDisplayName());
         }
-    }
-
-    @Override
-    public boolean isAcceptingTasks() {
-        return acceptingTasks;
     }
 
     private static final Logger LOGGER = Logger.getLogger(MansionComputer.class.getName());

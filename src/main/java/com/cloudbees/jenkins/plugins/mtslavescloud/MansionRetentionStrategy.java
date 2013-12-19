@@ -52,7 +52,7 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
             }
             final Storage storage = extensionList.get(0);
             final MansionComputer computer = (MansionComputer) node.toComputer();
-            computer.acceptingTasks = false;
+            computer.setAcceptingTasks(false);
 
             // perform sync asynchronously so other tasks are not delayed
             Computer.threadPoolForRemoting.submit(new Runnable() {
