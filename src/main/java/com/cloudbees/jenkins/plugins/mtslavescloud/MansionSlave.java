@@ -113,6 +113,15 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
             e.printStackTrace(listener.error("Failed to update the file system clan"));
             LOGGER.log(Level.INFO, "Failed to update the file system clan", e);
         }
+        BillingMemoBuilder.BuildHistory history = getNodeProperties().get(BillingMemoBuilder.BuildHistory.class);
+        if (history != null) {
+            try {
+                vm.setMemo(history.toJSONObject());
+            } catch (IOException e) {
+                LOGGER.log(Level.WARNING, "Failed to set memo "+vm.url, e);
+            }
+        }
+
         try {
             vm.dispose();
             listener.getLogger().println("Disposed " + vm.url+" last renewal was "+new Date(renewalTimestamp));
