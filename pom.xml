@@ -8,7 +8,7 @@
 
   <groupId>com.cloudbees.jenkins.plugins</groupId>
   <artifactId>mansion-cloud</artifactId>
-  <version>1.8-SNAPSHOT</version>
+  <version>1.8</version>
   <packaging>hpi</packaging>
   <name>Mansion Cloud Plugin</name>
 
