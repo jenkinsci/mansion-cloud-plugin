@@ -21,7 +21,7 @@ import static hudson.init.InitMilestone.JOB_LOADED;
 public class MansionPlugin extends Plugin {
 
 
-    public static final String MANSION_BROKER_URL = System.getProperty(MansionPlugin.class + ".MANSION_BROKER_URL","https://mansion-broker.cloudbees.com");
+    public static final String MANSION_BROKER_URL = System.getProperty(MansionPlugin.class + ".MANSION_BROKER_URL","https://mansion-broker.cloudbees.com/");
     private boolean configured = false;
 
     @Initializer(after = JOB_LOADED)
