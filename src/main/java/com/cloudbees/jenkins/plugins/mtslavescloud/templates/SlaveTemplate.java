@@ -100,7 +100,8 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
     public boolean matches(Label label) {
         return label.matches(new VariableResolver<Boolean>() {
             public Boolean resolve(String name) {
-                return name.equals(getLabel()) || name.equals("small") || name.equals("large") || name.equals("xlarge");
+                return name.equals(getLabel()) || name.equals("small") || name.equals("large") || name.equals("xlarge")
+                || name.equals("standard") || name.equals("hi-speed");
             }
         });
     }

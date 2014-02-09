@@ -233,6 +233,13 @@ public class MansionCloud extends AbstractCloudImpl {
                 if (st.getLabel().equals(SlaveTemplateList.M1_COMPATIBLE)) {
                     compat = " m1."+box.size;
                 }
+
+                if (box.size == "large") {
+                    compat += " standard";
+                } else if (box.size == "xlarge") {
+                    compat += " hi-speed";
+                }
+
                 r.add(new PlannedMansionSlave(Jenkins.getInstance().getLabel(st.getLabel()+" "+box.size+compat), st, vm));
             }
         } catch (IOException e) {
@@ -253,9 +260,9 @@ public class MansionCloud extends AbstractCloudImpl {
             return new HardwareSpec(getDefaultSize(st));
         if (st.matches(label,"small") || label.getName().equals("m1.small"))
             return new HardwareSpec("small");
-        if (st.matches(label,"large") || label.getName().equals("m1.large"))
+        if (st.matches(label,"large") || st.matches(label,"standard") || label.getName().equals("m1.large"))
             return new HardwareSpec("large");
-        if (st.matches(label,"xlarge"))
+        if (st.matches(label,"xlarge") || st.matches(label,"hi-speed"))
             return new HardwareSpec("xlarge");
         throw new AssertionError("Size computation problem with label: "+label);
     }
