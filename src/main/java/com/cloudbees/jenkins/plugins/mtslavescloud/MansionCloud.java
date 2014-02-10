@@ -234,9 +234,9 @@ public class MansionCloud extends AbstractCloudImpl {
                     compat = " m1."+box.size;
                 }
 
-                if (box.size == "large") {
+                if (box.size.equals("large")) {
                     compat += " standard";
-                } else if (box.size == "xlarge") {
+                } else if (box.size.equals("xlarge")) {
                     compat += " hi-speed";
                 }
 
