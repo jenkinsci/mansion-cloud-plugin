@@ -257,7 +257,7 @@ public class MansionCloud extends AbstractCloudImpl {
      */
     private HardwareSpec getBoxOf(SlaveTemplate st, Label label) {
         if (label==null || st.matches(label,""))
-            return new HardwareSpec(getDefaultSize(st));
+            return new HardwareSpec(getDefaultSize(st).toLowerCase());
         if (st.matches(label,"small") || label.getName().equals("m1.small"))
             return new HardwareSpec("small");
         if (st.matches(label,"large") || st.matches(label,"standard") || label.getName().equals("m1.large"))
