@@ -1,8 +1,10 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
+import com.cloudbees.jenkins.plugins.mtslavescloud.templates.SlaveTemplateList;
 import hudson.BulkChange;
 import hudson.Plugin;
 import hudson.init.Initializer;
+import hudson.model.RootAction;
 import hudson.slaves.Cloud;
 import jenkins.model.Jenkins;
 
@@ -11,7 +13,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-import static hudson.init.InitMilestone.JOB_LOADED;
+import static hudson.init.InitMilestone.*;
 
 /**
  * Automatically wires up the {@link MansionCloud} upon initial installation.
@@ -27,7 +29,10 @@ public class MansionPlugin extends Plugin {
     @Initializer(after = JOB_LOADED)
     public static void setup() throws IOException {
         Jenkins jenkins = Jenkins.getInstance();
-        MansionPlugin thisPlugin = Jenkins.getInstance().getPlugin(MansionPlugin.class);
+
+        // make sure SlaveTemplateList is initialized
+        jenkins.getExtensionList(RootAction.class).get(SlaveTemplateList.class);
+        MansionPlugin thisPlugin = jenkins.getPlugin(MansionPlugin.class);
         thisPlugin.load();
         // only auto-configure mansion once
         if (!thisPlugin.configured) {
