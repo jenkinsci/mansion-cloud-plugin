@@ -207,11 +207,11 @@ public class MansionCloud extends AbstractCloudImpl {
 
         SlaveTemplate st = SlaveTemplateList.get().get(label);
         if (st==null) {
-            LOGGER.fine("No slave template matching "+label);
+            LOGGER.fine("No executor template matching "+label);
             return Collections.emptyList();
         }
         if (!st.isEnabled()) {
-            LOGGER.fine("Slave template is disabled "+st);
+            LOGGER.fine("Executor template is disabled "+st);
             return Collections.emptyList();
         }
         if (getBackOffCounter(st).isBackOffInEffect()) {
@@ -316,7 +316,7 @@ public class MansionCloud extends AbstractCloudImpl {
     public static class DescriptorImpl extends Descriptor<Cloud> {
         @Override
         public String getDisplayName() {
-            return "Multi-tenancy Slave Cloud";
+            return "CloudBees Cloud Executors";
         }
 
         private CloudBeesUser findUser() throws AbortException {
