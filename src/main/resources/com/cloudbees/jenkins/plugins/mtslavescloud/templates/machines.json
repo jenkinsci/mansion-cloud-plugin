@@ -25,7 +25,7 @@
     },
     {
         "id" : "osx",
-        "displayName" : "DEV@cloud Standard Mac OS X",
+        "displayName" : "DEV@cloud Standard Mac OS X (Beta)",
         "mansionType": "osx",
         "spec" : {
             "configs" : [
