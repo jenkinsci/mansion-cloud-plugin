@@ -47,25 +47,5 @@
             ]
         },
         "persistentFileSystems" : ["/scratch/jenkins"]
-    },
-    {
-        "id" : "windows",
-        "displayName" : "DEV@cloud Standard Windows XP",
-        "mansionType": "win",
-        "spec" : {
-            "configs" : [
-                {
-                    "type" : "fileSystem",
-                    "fileSystem" : "http://localhost:8080/zfs/windowsxp",
-                    "path" : "/"
-                },
-                {
-                    "type" : "fileSystem",
-                    "fileSystem" : "http://localhost:8080/zfs/ntfs5g",
-                    "path" : "C:\\scratch\\jenkins"
-                }
-            ]
-        },
-        "persistentFileSystems" : ["C:\\scratch\\jenkins"]
     }
 ]}
