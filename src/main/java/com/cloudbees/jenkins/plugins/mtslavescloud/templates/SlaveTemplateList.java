@@ -196,7 +196,7 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
     }
 
     public File getRootDir() {
-        return new File(Jenkins.getInstance().getRootDir(),getUrlName());
+        return new File(Jenkins.getInstance().getRootDir(),"cloudSlaveTemplates");
     }
 
     public void save() throws IOException {
