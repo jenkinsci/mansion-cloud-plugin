@@ -81,22 +81,6 @@ public class MansionCloud extends AbstractCloudImpl {
     private transient /*almost final*/ PlannedMansionSlaveSet inProgressSet;
 
     /**
-     * Determine the default size by checking {@link MansionConfiguration}s
-     *
-     * @param templateName
-     * @return
-     */
-    private String getDefaultSize(SlaveTemplate templateName) {
-        for (MansionConfiguration c : MansionConfiguration.all()) {
-            MansionConfiguration.Size s = c.getDefaultSize(templateName);
-            if (s != null) {
-                return s.getCanonical().name();
-            }
-        }
-        return MansionConfiguration.Size.HISPEED.getCanonical().name();
-    }
-
-    /**
      * Caches {@link TokenGenerator} by keying it off from {@link CloudBeesUser} that provides its credential.
      */
     class Cache {
@@ -257,7 +241,7 @@ public class MansionCloud extends AbstractCloudImpl {
      */
     private HardwareSpec getBoxOf(SlaveTemplate st, Label label) {
         if (label==null || st.matches(label,""))
-            return new HardwareSpec(getDefaultSize(st).toLowerCase());
+            return new HardwareSpec(st.getDefaultSize().getHardwareSize());
         if (st.matches(label,"small") || label.getName().equals("m1.small"))
             return new HardwareSpec("small");
         if (st.matches(label,"large") || st.matches(label,"standard") || label.getName().equals("m1.large"))

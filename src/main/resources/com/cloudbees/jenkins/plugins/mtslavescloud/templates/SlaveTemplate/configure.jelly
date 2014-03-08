@@ -17,6 +17,14 @@
           <f:readOnlyTextbox />
         </f:entry>
 
+        <f:entry field="defaultSize" title="${%Default Size}">
+          <select name="defaultSize">
+            <j:forEach var="availableSize" items="${it.availableSizes}">
+              <f:option value="${availableSize}" selected="${instance.defaultSize==availableSize}">${availableSize.label}</f:option>
+            </j:forEach>
+          </select>
+        </f:entry>
+
         <f:entry field="enabled">
           <f:checkbox title="${%Enable this cloud executor template}"/>
         </f:entry>

@@ -5,6 +5,8 @@ import hudson.ExtensionList;
 import jenkins.model.Jenkins;
 import org.apache.tools.ant.ExtensionPoint;
 
+import java.util.Locale;
+
 /**
  * An extension point for controlling the configuration of the mansion-plugin
  * dynamically.
@@ -15,12 +17,13 @@ public abstract class MansionConfiguration extends ExtensionPoint {
 
     /**
      * Canonical sizes are xlarge, large & small, but
-     * marketing has decided that hispeed(xlarge) and standard(large)
+     * marketing has decided that hi-speed(xlarge) and standard(large)
      * are easier to communicate externally, so we demonstrate
      * support for those as well.
      */
     public enum Size {
-        XLARGE, HISPEED(XLARGE), LARGE, STANDARD(LARGE), SMALL;
+        XLARGE("hi-speed"), HISPEED(XLARGE), LARGE("standard"), STANDARD(LARGE), SMALL("small");
+        private String label;
         private Size canonical;
 
         /**
@@ -28,14 +31,33 @@ public abstract class MansionConfiguration extends ExtensionPoint {
          * @param canonical
          */
         Size(Size canonical) {
-            this.canonical = canonical == null ? this : canonical;
-        }
-        Size() {
-            this(null);
+            this.canonical = canonical;
         }
 
-        public Size getCanonical() {
-            return this.canonical;
+        /**
+         * Only canonical sizes have labels.
+         * @param label
+         */
+        Size(String label) {
+            this.canonical = this;
+            this.label = label;
+        }
+
+        /**
+         * The marketing/user-friendly label for this hardware size.
+         *
+         * @return
+         */
+        public String getLabel() {
+            return this.canonical.label;
+        }
+
+        /**
+         * The {@link com.cloudbees.mtslaves.client.HardwareSpec#size}
+         * @return
+         */
+        public String getHardwareSize() {
+            return this.canonical.name().toLowerCase(Locale.ENGLISH);
         }
     }
 

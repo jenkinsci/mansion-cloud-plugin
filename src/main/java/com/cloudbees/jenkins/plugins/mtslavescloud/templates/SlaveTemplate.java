@@ -1,11 +1,15 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 
 import com.cloudbees.jenkins.plugins.mtslavescloud.MansionCloud;
+import com.cloudbees.jenkins.plugins.mtslavescloud.MansionConfiguration;
+import com.cloudbees.mtslaves.client.HardwareSpec;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import hudson.model.AbstractItem;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
+import hudson.model.Item;
+import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.Label;
 import hudson.security.Permission;
@@ -19,9 +23,13 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import javax.servlet.ServletException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+
+import static com.cloudbees.jenkins.plugins.mtslavescloud.MansionConfiguration.Size.*;
+import static java.util.Arrays.asList;
 
 /**
  * @author Kohsuke Kawaguchi
@@ -30,6 +38,12 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
 
     private boolean disabled;
     private String account;
+
+    /**
+     * Allow the definition of a default size for each template so that users don't have
+     * to edit each and every job.
+     */
+    private MansionConfiguration.Size defaultSize;
 
     protected SlaveTemplate(String name) {
         super(SlaveTemplateList.get(), name);
@@ -54,6 +68,36 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
      */
     public String getAccount() {
         return account;
+    }
+
+    /**
+     * Populate the default size based on the #{@link MansionConfiguration#getDefaultSize(SlaveTemplate)}
+     * for the first time, then use whatever the user has saved.
+     */
+    public MansionConfiguration.Size getDefaultSize() {
+        if (defaultSize == null) {
+            return getConfiguredDefaultSize();
+        } else {
+            return defaultSize;
+        }
+    }
+
+    public List<MansionConfiguration.Size> getAvailableSizes() {
+        List<MansionConfiguration.Size> available = asList(HISPEED,STANDARD);
+        if (getConfiguredDefaultSize() == SMALL) {
+            available.add(SMALL);
+        }
+        return available;
+    }
+
+    private MansionConfiguration.Size getConfiguredDefaultSize() {
+        for (MansionConfiguration config : Jenkins.getInstance().getExtensionList(MansionConfiguration.class)) {
+            MansionConfiguration.Size configSize = config.getDefaultSize(this);
+            if (configSize != null) {
+                return configSize;
+            }
+        }
+        return MansionConfiguration.Size.HISPEED;
     }
 
     /**
@@ -152,6 +196,7 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
         this.disabled = !json.has("enabled");
         this.account = json.optString("account");
         this.displayName = json.optString("displayName");
+        this.defaultSize = MansionConfiguration.Size.valueOf(json.optString("defaultSize"));
     }
 
 
