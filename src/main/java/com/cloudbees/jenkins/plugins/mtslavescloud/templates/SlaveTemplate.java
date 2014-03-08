@@ -83,7 +83,9 @@ public abstract class SlaveTemplate extends AbstractItem implements Describable<
     }
 
     public List<MansionConfiguration.Size> getAvailableSizes() {
-        List<MansionConfiguration.Size> available = asList(HISPEED,STANDARD);
+        List<MansionConfiguration.Size> available = new ArrayList<MansionConfiguration.Size>();
+        available.add(HISPEED);
+        available.add(STANDARD);
         if (getConfiguredDefaultSize() == SMALL) {
             available.add(SMALL);
         }
