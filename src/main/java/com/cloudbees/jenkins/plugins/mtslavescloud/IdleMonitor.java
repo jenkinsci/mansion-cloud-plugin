@@ -8,7 +8,6 @@ import hudson.model.listeners.RunListener;
 
 import java.util.concurrent.Callable;
 
-import com.cloudbees.hudson.plugins.Config;
 import jenkins.model.Jenkins;
 
 /**
