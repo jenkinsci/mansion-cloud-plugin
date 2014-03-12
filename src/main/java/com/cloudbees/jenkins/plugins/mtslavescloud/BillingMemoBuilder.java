@@ -2,7 +2,6 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 
 import hudson.Extension;
 import hudson.matrix.MatrixBuild;
-import hudson.maven.MavenBuild;
 import hudson.model.AbstractBuild;
 import hudson.model.Cause;
 import hudson.model.Node;
@@ -54,7 +53,8 @@ public class BillingMemoBuilder extends RunListener<AbstractBuild> {
         private JSONArray builds = new JSONArray();
 
         public void add(AbstractBuild run) {
-            if (! (run instanceof MavenBuild) &&  ! (run instanceof MatrixBuild)) {
+            String n = run.getClass().getName();
+            if (!n.equals("hudson.maven.MavenBuild") &&  ! (run instanceof MatrixBuild)) {
                 JSONObject build = new JSONObject();
                 build.element("url", run.getUrl());
                 build.element("durationInMilliseconds", run.getDuration());
