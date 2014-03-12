@@ -1,6 +1,5 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
-import com.cloudbees.hudson.plugins.Config;
 import com.cloudbees.jenkins.plugins.mtslavescloud.templates.FileSystemClan;
 import com.cloudbees.jenkins.plugins.mtslavescloud.templates.SlaveTemplate;
 import com.cloudbees.jenkins.plugins.mtslavescloud.util.PromisedFuture;
@@ -13,6 +12,7 @@ import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.SshdEndpointProperty;
 import com.trilead.ssh2.signature.RSAPublicKey;
 import com.trilead.ssh2.signature.RSASHA1Verify;
+import hudson.Main;
 import hudson.model.Computer;
 import hudson.model.Label;
 import hudson.model.Node;
@@ -344,7 +344,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
         for (GrantedAuthority a : Jenkins.getAuthentication().getAuthorities())
             if (a.getAuthority().equals("cloudbees-admin"))
                 return true;
-        return Config.isDevMode();
+        return Main.isDevelopmentMode || Main.isUnitTest || Boolean.getBoolean("hudson.hpi.run");
     }
 
     /**
