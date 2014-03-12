@@ -8,6 +8,7 @@ import hudson.model.Executor;
 import hudson.model.Node;
 import hudson.model.Slave;
 import hudson.plugins.sshslaves.SSHLauncher;
+import hudson.slaves.CloudSlaveRetentionStrategy;
 import hudson.slaves.OfflineCause;
 import hudson.util.TimeUnit2;
 import jenkins.model.Jenkins;
@@ -16,7 +17,7 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class MansionRetentionStrategy <T extends MansionComputer> extends CloudSlaveRetentionstrategy<T> {
+public class MansionRetentionStrategy <T extends MansionComputer> extends CloudSlaveRetentionStrategy<T> {
 
     @Override
     public long check(T c) {
@@ -111,7 +112,7 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
     /**
      * How long a slave can be idle before being terminated
      */
-    public static long TIMEOUT = Long.getLong(CloudSlaveRetentionstrategy.class.getName()+".timeout", TimeUnit2.SECONDS.toMillis(5));
+    public static long TIMEOUT = Long.getLong(CloudSlaveRetentionStrategy.class.getName()+".timeout", TimeUnit2.SECONDS.toMillis(5));
 
 
     private static Logger LOGGER  = Logger.getLogger(MansionRetentionStrategy.class.getName());

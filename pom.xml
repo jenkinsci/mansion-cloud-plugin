@@ -146,6 +146,6 @@
 
   <properties>
     <port>8081</port>
-    <jenkins.version>1.509</jenkins.version>
+    <jenkins.version>1.532</jenkins.version>
   </properties>
 </project>
