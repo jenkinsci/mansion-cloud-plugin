@@ -20,13 +20,13 @@ def showProblem(String title, long timestamp, Throwable t) {
 
 l.layout {
     l.main_panel {
-        h1("Cloud Executor Provisioning Problems")
+        h1("DEV@cloud Slave Provisioning Problems")
 
         my.backOffCounters.each { bc ->
             if (bc.isBackOffInEffect()) {
                 // if we are having a problem, report that
                 div(class:"warning",
-                    _("Requesting of ${bc.id} cloud executors are temporarily suspended due to an earlier problem. ")+
+                    _("Requesting of ${bc.id} cloud slaves are temporarily suspended due to an earlier problem. ")+
                     _("It will be tried again in ${getTimeSpanString(bc.nextAttempt-System.currentTimeMillis())}"))
 
                 form(method:"post",action:"retryNow?broker=${bc.id}", style:"margin:1em") {
@@ -39,7 +39,7 @@ l.layout {
 
         showProblem("Broker Problem",0,my.lastException)
         my.inProgressSet.each { PlannedMansionSlave s ->
-            showProblem("Cloud Executors ${s.vm.url} Problem", s.problemTimestamp, s.problem)
+            showProblem("Slave ${s.vm.url} Problem", s.problemTimestamp, s.problem)
         }
     }
 }

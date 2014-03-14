@@ -11,7 +11,7 @@ l.layout {
             form(method:"post",action:"dismiss", style:"margin:1em; float:right; display:block") {
                 f.submit(value:_("Dismiss this error"))
             }
-            text("Cloud Executor Provisioning Problem: ${new Date(my.problemTimestamp)}")
+            text("Slave Provisioning Problem: ${new Date(my.problemTimestamp)}")
         }
 
 

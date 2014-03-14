@@ -64,7 +64,7 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
                         SSHUserPrivateKey key = (SSHUserPrivateKey) launcher.getCredentials();
                         storage.sync(slave, launcher, key);
                     } catch (Throwable t) {
-                        LOGGER.log(Level.SEVERE, "Failed to sync executor", t);
+                        LOGGER.log(Level.SEVERE, "Failed to sync slave", t);
                     } finally {
 
                         // attempt to heuristically detect a race condition
@@ -82,7 +82,7 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
                         try {
                             MansionRetentionStrategy.super.kill(node);
                         } catch (IOException e) {
-                            LOGGER.log(Level.SEVERE, "Error removing executor " + slave.getNodeName());
+                            LOGGER.log(Level.SEVERE, "Error removing slave " + slave.getNodeName());
                         }
 
                     }

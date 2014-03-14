@@ -26,7 +26,7 @@
         </f:entry>
 
         <f:entry field="enabled">
-          <f:checkbox title="${%Enable this cloud executor template}"/>
+          <f:checkbox title="${%Enable this slave template}"/>
         </f:entry>
 
         <j:if test="${descriptor.hasMultipleAccounts()}">

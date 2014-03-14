@@ -66,7 +66,7 @@ public class LocalSlaveTemplate extends SlaveTemplate {
 
         @Override
         public String getDisplayName() {
-            return "Local Cloud Executor Template";
+            return "Local Slave Template";
         }
     }
 }

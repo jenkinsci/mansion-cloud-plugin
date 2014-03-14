@@ -115,7 +115,7 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
     }
 
     public String getFullName() {
-        return "Cloud Executor Templates";
+        return "DEV@cloud Slave Templates";
     }
 
     public String getFullDisplayName() {
@@ -131,7 +131,7 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
     }
 
     public String getUrlName() {
-        return "cloudExecutorTemplates";
+        return "cloudSlaveTemplates";
     }
 
     public String getSearchUrl() {
@@ -207,7 +207,7 @@ public class SlaveTemplateList extends AbstractModelObject implements ItemGroup<
 
     public FormValidation doCheckName(@QueryParameter String name) {
         if (name!=null && templates.containsKey(name))
-            return FormValidation.error("Cloud Executor template '%s' already exists", name);
+            return FormValidation.error("Slave template '%s' already exists", name);
         return FormValidation.ok();
     }
 

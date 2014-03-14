@@ -16,7 +16,7 @@ def row(style,body) {
 }
 
 l.ajax {
-    l.pane(width:2, title:_("Cloud Executor Provisioning"), id:"mansion-status") {
+    l.pane(width:2, title:_("DEV@cloud Slave Provisioning"), id:"mansion-status") {
         def mansions = Jenkins.getInstance().clouds.getAll(MansionCloud.class)
         mansions.each { m ->
 

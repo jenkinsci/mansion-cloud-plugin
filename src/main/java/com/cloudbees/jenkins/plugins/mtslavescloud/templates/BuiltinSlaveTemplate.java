@@ -85,7 +85,7 @@ public class BuiltinSlaveTemplate extends SlaveTemplate {
 
         @Override
         public String getDisplayName() {
-            return "Built-in Cloud Executor Template";
+            return "Built-in Slave Template";
         }
     }
 }
