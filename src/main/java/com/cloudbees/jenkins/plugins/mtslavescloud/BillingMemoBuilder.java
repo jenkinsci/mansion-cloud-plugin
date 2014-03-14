@@ -36,15 +36,9 @@ public class BillingMemoBuilder extends RunListener<AbstractBuild> {
                 history = new BuildHistory();
             }
             history.add(run);
-            try {
-                node.getNodeProperties().add(history);
-            } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Failed to save the build history",e);
-            }
+            node.getNodeProperties().add(history);
         }
     }
-
-    private static Logger LOGGER = Logger.getLogger(BillingMemoBuilder.class.getName());
 
     /**
      * Stores a JSON representation of the build history of this node.
