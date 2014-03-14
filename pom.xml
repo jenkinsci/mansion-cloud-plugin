@@ -11,6 +11,10 @@
   <version>1.14-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <name>CloudBees Cloud Connector</name>
+  <description>
+    This plugin provisions DEV@cloud slaves which boot and connect in seconds, and cache your workspace efficiently for future builds. 
+    Both Linux and OSX slaves are available. This plugin requires a CloudBees account.
+  </description>
 
   <scm>
     <connection>scm:git:git://git.cloudbees.com/cloudbees/mansion-cloud-plugin.git</connection>

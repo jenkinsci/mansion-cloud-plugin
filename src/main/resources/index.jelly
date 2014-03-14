@@ -1,3 +1,4 @@
 <div>
-  Manages DEV@cloud Slaves.
+    This plugin provisions DEV@cloud slaves which boot and connect in seconds, and cache your workspace efficiently for future builds. 
+    Both Linux and OSX slaves are available. This plugin requires a CloudBees account.
 </div>
