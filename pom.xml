@@ -10,7 +10,7 @@
   <artifactId>mansion-cloud</artifactId>
   <version>1.13-SNAPSHOT</version>
   <packaging>hpi</packaging>
-  <name>Mansion Cloud Plugin</name>
+  <name>CloudBees Cloud Connector</name>
 
   <scm>
     <connection>scm:git:git://git.cloudbees.com/cloudbees/mansion-cloud-plugin.git</connection>
