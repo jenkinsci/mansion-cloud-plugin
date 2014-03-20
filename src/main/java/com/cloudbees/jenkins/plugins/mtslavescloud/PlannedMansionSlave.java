@@ -152,8 +152,12 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      */
     @IgnoreJRERequirement
     public Node call() throws Exception {
-        final String oldName = Thread.currentThread().getName();
-        Thread.currentThread().setName(oldName+" : provisioning "+vm.url);
+        Thread t = Thread.currentThread();
+
+        final String oldName = t.getName();
+        t.setName(oldName + " : provisioning " + vm.url);
+        final ClassLoader oldCL = t.getContextClassLoader();
+        t.setContextClassLoader(getClass().getClassLoader());
 
         try {
             status = "Configuring";
@@ -255,7 +259,8 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
             status = "Online";
             return s;
         } finally {
-            Thread.currentThread().setName(oldName);
+            t.setName(oldName);
+            t.setContextClassLoader(oldCL);
         }
     }
 
