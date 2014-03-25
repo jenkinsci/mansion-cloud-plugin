@@ -28,7 +28,7 @@ public class BillingMemoBuilder extends RunListener<AbstractBuild> {
 
     @Override
     public void onFinalized(AbstractBuild run) {
-        if (run.getBuiltOn() != null) {
+        if (run.getBuiltOn() != null && run.getBuiltOn() instanceof MansionSlave) {
             AbstractBuild build = (AbstractBuild) run;
             Node node = build.getBuiltOn();
             BuildHistory history = node.getNodeProperties().get(BuildHistory.class);
