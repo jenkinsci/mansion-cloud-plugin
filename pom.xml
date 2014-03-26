@@ -41,9 +41,9 @@
   </description>
 
   <scm>
-    <connection>scm:git:git://git.cloudbees.com/cloudbees/mansion-cloud-plugin.git</connection>
-    <developerConnection>scm:git:ssh://git@git.cloudbees.com/cloudbees/mansion-cloud-plugin.git</developerConnection>
-    <url>https://forge.cloudbees.com/a/cloudbees/repositories/mansion-cloud-plugin</url>
+    <connection>scm:git:git://github.com/cloudbees/mansion-cloud-plugin.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/cloudbees/mansion-cloud-plugin.git</developerConnection>
+    <url>https://github.com/jenkinsci/mansion-cloud-plugin</url>
   </scm>
 
   <dependencies>
