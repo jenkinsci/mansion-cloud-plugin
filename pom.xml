@@ -168,7 +168,6 @@
 
   <properties>
     <port>8081</port>
-    <jenkins.version>1.532</jenkins.version>
   </properties>
 
   <licenses>
