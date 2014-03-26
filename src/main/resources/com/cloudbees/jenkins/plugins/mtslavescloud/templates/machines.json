@@ -24,6 +24,35 @@
         "persistentFileSystems" : ["/"]
     },
     {
+        "id" : "android",
+        "displayName" : "DEV@cloud Standard Linux with Upgradable Android Installation",
+        "mansionType": "lxc",
+        "spec" : {
+            "configs" : [
+                {
+                    "type" : "fileSystem",
+                    "fileSystem" : "http://localhost:8080/zfs/fedora17",
+                    "path" : "/"
+                },
+                {
+                    "type" : "fileSystem",
+                    "fileSystem" : "http://localhost:8080/zfs/android",
+                    "path" : "/opt/android/android-sdk-linux"
+                },
+                {
+                    "type" : "fileSystem",
+                    "fileSystem" : "http://localhost:8080/zfs/empty",
+                    "path" : "/tmp"
+                },
+                {
+                    "type" : "lxcNetwork",
+                    "hostname" : "jenkins"
+                }
+            ]
+        },
+        "persistentFileSystems" : ["/","/opt/android/android-sdk-linux"]
+    },
+    {
         "id" : "osx",
         "displayName" : "DEV@cloud Standard Mac OS X (Beta)",
         "mansionType": "osx",
