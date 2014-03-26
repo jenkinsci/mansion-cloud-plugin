@@ -81,17 +81,17 @@
     <dependency><!-- for accessing the credentials -->
       <groupId>com.cloudbees.jenkins.plugins</groupId>
       <artifactId>cloudbees-credentials</artifactId>
-      <version>3.2</version>
+      <version>3.3</version>
     </dependency>
     <dependency>
       <groupId>com.cloudbees</groupId>
       <artifactId>endpoints</artifactId>
-      <version>0.5</version>
+      <version>0.8</version>
     </dependency>
     <dependency><!-- for entering credentials from UI -->
       <groupId>com.cloudbees.jenkins.plugins</groupId>
       <artifactId>cloudbees-registration</artifactId>
-      <version>3.11</version>
+      <version>3.14</version>
       <scope>test</scope>
     </dependency>
     <dependency>
