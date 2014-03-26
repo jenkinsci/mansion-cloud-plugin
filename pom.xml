@@ -170,4 +170,11 @@
     <port>8081</port>
     <jenkins.version>1.532</jenkins.version>
   </properties>
+
+  <licenses>
+    <license>
+      <name>MIT</name>
+      <url>http://www.opensource.org/licenses/mit-license.php</url>
+    </license>
+  </licenses>
 </project>
