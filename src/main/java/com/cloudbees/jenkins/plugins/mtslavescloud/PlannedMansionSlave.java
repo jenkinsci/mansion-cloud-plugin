@@ -256,6 +256,7 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
                     try {
                         // set some time out to avoid infinite blockage, which was observed during test
                         connect.get(5, TimeUnit.MINUTES);
+                        cloud.getBackOffCounter(st).clear();
                         break;
                     } catch (ExecutionException e) {
                         if (! (e.getCause() instanceof IOException))
