@@ -37,7 +37,7 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
     public long check(T c) {
         long nextCheck = super.check(c);
 
-        if (c.isOffline() && c.getOfflineCause() instanceof OfflineCause.ChannelTermination) {
+        if (c.isOffline() && !c.isConnecting() && c.isAcceptingTasks()) {
             //take offline without syncing
             try {
                 MansionSlave node = c.getNode();
