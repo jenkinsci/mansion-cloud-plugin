@@ -30,6 +30,7 @@ import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.AsyncPeriodicWork;
+import hudson.model.Computer;
 import hudson.model.Descriptor.FormException;
 import hudson.model.Label;
 import hudson.model.Node;
@@ -178,8 +179,14 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
             try {
                 for (MansionSlave n : filter(jenkins.getNodes(), MansionSlave.class)) {
                     try {
-                        Thread.currentThread().setName(originalThreadName + " - renewing " + n.vm.getId());
-                        n.renewLease();
+                        Computer c = n.toComputer();
+                        if (c != null && (c.isConnecting() || c.isOnline())) {
+                            Thread.currentThread().setName(originalThreadName + " - renewing " + n.vm.getId());
+                            n.renewLease();
+                        } else {
+                            LOGGER.log(Level.WARNING, "Not renewing because it appears to be offline: " + n.vm.url);
+                        }
+
                     } catch (IOException e) {
                         e.printStackTrace(listener.error("Failed to renew the lease " + n.vm.url));
                         LOGGER.log(Level.WARNING, "Failed to renew the lease " + n.vm.url, e);
