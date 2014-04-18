@@ -35,6 +35,7 @@ import hudson.slaves.ComputerListener;
 import org.acegisecurity.Authentication;
 
 import java.io.IOException;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -49,6 +50,11 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
      * When the computer finished connecting. Milliseconds since epoch.
      */
     private Long launchedTime;
+
+    /**
+     * Keep track of whether a launch has been attempted.
+     */
+    private boolean launchAttempted = false;
 
     MansionComputer(MansionSlave slave) {
         super(slave);
@@ -78,6 +84,24 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
      */
     public @CheckForNull Long getLaunchedTime() {
         return launchedTime;
+    }
+
+    /**
+     * Returns true if a connection hasn't been attempted.
+     *
+     * This is used to prevent prematurely removing computers
+     * which are created but have not called connect().
+     * 
+     * @return
+     */
+    public boolean isLaunchAttempted() {
+        return launchAttempted;
+    }
+
+    @Override
+    protected Future<?> _connect(boolean forceReconnect) {
+        launchAttempted = true;
+        return super._connect(forceReconnect);
     }
 
     @Override
