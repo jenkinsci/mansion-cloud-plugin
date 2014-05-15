@@ -36,6 +36,8 @@ import com.cloudbees.jenkins.plugins.mtslavescloud.templates.SlaveTemplateList;
 import com.cloudbees.jenkins.plugins.mtslavescloud.util.BackOffCounter;
 import com.cloudbees.mtslaves.client.BrokerRef;
 import com.cloudbees.mtslaves.client.HardwareSpec;
+import com.cloudbees.mtslaves.client.QuotaExceededException;
+import com.cloudbees.mtslaves.client.TooManyVirtualMachinesException;
 import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.cloudbees.CloudBeesAccount;
@@ -91,6 +93,7 @@ public class MansionCloud extends AbstractCloudImpl {
      */
     private transient /*almost final*/ ConcurrentMap<String/*broker ID*/,BackOffCounter> backoffCounters;
 
+    private transient /*almost final*/ QuotaProblems quotaProblems;
     /**
      * So long as {@link CloudBeesUser} doesn't change, we'll reuse the same {@link TokenGenerator}
      */
@@ -150,6 +153,7 @@ public class MansionCloud extends AbstractCloudImpl {
 
     private void initTransient() {
         backoffCounters = new ConcurrentHashMap<String, BackOffCounter>();
+        quotaProblems = new QuotaProblems();
         inProgressSet = new PlannedMansionSlaveSet();
     }
 
@@ -226,12 +230,16 @@ public class MansionCloud extends AbstractCloudImpl {
             LOGGER.fine("Back off in effect for "+st);
             return Collections.emptyList();
         }
+        HardwareSpec box = getBoxOf(st,label);
+
+        if (getQuotaProblems().isBlocked(box, st)) {
+            LOGGER.fine("Provisioning blocked by quota problems.");
+            return Collections.emptyList();
+        }
 
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
             for (int i=0; i<excessWorkload; i++) {
-
-                HardwareSpec box = getBoxOf(st,label);
 
                 URL broker = new URL(this.broker,"/"+st.getMansionType()+"/");
                 final VirtualMachineRef vm = new BrokerRef(broker,createAccessToken(broker)).createVirtualMachine(box);
@@ -254,6 +262,10 @@ public class MansionCloud extends AbstractCloudImpl {
             handleException(st, "Failed to provision from " + this, e);
         } catch (OauthClientException e) {
             handleException(st, "Authentication error from " + this, e);
+        } catch (TooManyVirtualMachinesException e) {
+            quotaProblems.addTooManyVMProblem(e);
+        } catch (QuotaExceededException e) {
+            quotaProblems.addProblem(e);
         }
         return r;
     }
@@ -295,6 +307,10 @@ public class MansionCloud extends AbstractCloudImpl {
 
     public Collection<BackOffCounter> getBackOffCounters() {
         return Collections.unmodifiableCollection(backoffCounters.values());
+    }
+
+    public QuotaProblems getQuotaProblems() {
+        return quotaProblems;
     }
 
     protected BackOffCounter getBackOffCounter(SlaveTemplate st) {

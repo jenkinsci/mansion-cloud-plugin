@@ -30,6 +30,7 @@ import hudson.Util
 import jenkins.model.Jenkins;
 
 def l = namespace(lib.LayoutTagLib);
+def f = namespace(lib.FormTagLib)
 
 def row(style,body) {
     tr {
@@ -66,6 +67,22 @@ l.ajax {
                             div("Currently experiencing problems. Will try again in ${Util.getTimeSpanString(bc.nextAttempt-System.currentTimeMillis())}")
                             shownSomething = true
                         }
+                    }
+                }
+            }
+
+            m.quotaProblems.each { p ->
+                row(null) {
+                    div(class:"warning") {
+                        div(style:'max-width:10em; word-wrap:normal',p.message)
+                        shownSomething = true
+                    }
+                }
+            }
+            if (m.quotaProblems.size > 0) {
+                row(null) {
+                    form(method:"post",action:"${rootURL}/cloud/${m.name}/quotaProblems/clear", style:"float:right; display:block") {
+                        f.submit(value:_("Retry"))
                     }
                 }
             }
