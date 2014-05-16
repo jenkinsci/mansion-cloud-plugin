@@ -8,6 +8,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import hudson.Extension;
 import hudson.model.Computer;
+import hudson.model.PeriodicWork;
 import hudson.slaves.ComputerListener;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.HttpRedirect;
@@ -17,9 +18,28 @@ import org.kohsuke.stapler.interceptor.RequirePOST;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.collect.Iterators.concat;
 
+/**
+ * Keeps track of problems related to quota over-usage.
+ * Allows the user to view and manage these problems.
+ *
+ * This can include:
+ * <ul>
+ *     <ol>Not having a subscription</ol>
+ *     <ol>Suspended for non-payment</ol>
+ *     <ol>Using sizes/hardware which aren't allowed</ol>
+ *     <old>Using too many virtual machines at once</old>
+ * </ul>
+ *
+ * Most quota problems are related to a specific vmType.
+ * For example, if you are using the maximum lxc virtual
+ * machines, you should still be allowed to provision
+ * additional osx virtual machines.
+ *
+ */
 public class QuotaProblems implements Iterable<QuotaProblems.QuotaProblem> {
 
 
@@ -67,7 +87,18 @@ public class QuotaProblems implements Iterable<QuotaProblems.QuotaProblem> {
     }
 
 
+    /**
+     * General quota problems which we don't expect to change
+     * unless a user upgrades, for example.
+     */
     private List<QuotaProblem> problems = new ArrayList<QuotaProblem>();
+
+    /**
+     * These problems indicate the account is using
+     * too many virtual machines. Since this state changes
+     * over time, these problems are cleared automatically
+     * so that the user doesn't have to take a manual action.
+     */
     private List<QuotaProblem> tooManyVmProblems = new ArrayList<QuotaProblem>();
 
 
@@ -106,6 +137,12 @@ public class QuotaProblems implements Iterable<QuotaProblems.QuotaProblem> {
         return new HttpRedirect(Jenkins.getInstance().getRootUrl());
 
     }
+
+    /**
+     * Clear tooManyVmProblems list whenever we get rid of a computer.
+     * Users shouldn't have to press retry if we know there
+     * might be more capacity available.
+     */
     @Extension
     public static class TooManyVMCleaner extends ComputerListener {
         @Override
@@ -115,6 +152,28 @@ public class QuotaProblems implements Iterable<QuotaProblems.QuotaProblem> {
                     cloud.getQuotaProblems().tooManyVmProblems.clear();
                 }
             }
+        }
+    }
+
+
+    /**
+     * Periodically clear any quota issues related to having too many VMs.
+     * There are cases where the {@code TooManyVMCleaner} won't catch
+     * a change in system usage.
+     */
+    @Extension
+    public static class PeriodicTooManyVMCleaner extends PeriodicWork {
+
+        @Override
+        protected void doRun() throws Exception {
+            for (MansionCloud cloud : Jenkins.getInstance().clouds.getAll(MansionCloud.class)) {
+                cloud.getQuotaProblems().tooManyVmProblems.clear();
+            }
+        }
+
+        @Override
+        public long getRecurrencePeriod() {
+            return TimeUnit.MINUTES.toMillis(5);
         }
     }
 }
