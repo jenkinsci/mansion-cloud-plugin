@@ -74,7 +74,7 @@ l.ajax {
             m.quotaProblems.each { p ->
                 row(null) {
                     div(class:"warning") {
-                        div(style:'max-width:10em; word-wrap:normal',p.message)
+                        div(style:'max-width:100em; word-wrap:normal; white-space:normal',p.message)
                         shownSomething = true
                     }
                 }
