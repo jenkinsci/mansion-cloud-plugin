@@ -80,11 +80,11 @@ public class QuotaProblems implements Iterable<QuotaProblems.QuotaProblem> {
             } else if (blocksVmType()) {
                 return "Unable to provision " + exception.getVMType() + " : " + exception.getMessage()
                         + (exception instanceof TooManyVirtualMachinesException ?
-                            " (Will retry automatically)" : "");
+                            " (Will clear automatically)" : "");
 
             } else {
                 return "Unable to provision " + exception.getHardwareSize() +
-                        " from: " + exception.getVMType() + " : " + exception.getMessage();
+                        " from " + exception.getVMType() + " : " + exception.getMessage();
             }
         }
     }
