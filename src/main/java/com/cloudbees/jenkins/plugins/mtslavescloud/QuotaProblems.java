@@ -39,6 +39,7 @@ import static com.google.common.collect.Iterators.concat;
  * machines, you should still be allowed to provision
  * additional osx virtual machines.
  *
+ * @author Ryan Campbell
  */
 public class QuotaProblems implements Iterable<QuotaProblems.QuotaProblem> {
 
@@ -77,13 +78,15 @@ public class QuotaProblems implements Iterable<QuotaProblems.QuotaProblem> {
             if (blocksAll()) {
                 return exception.getMessage();
             } else if (blocksVmType()) {
-                return "Unable to provision " + exception.getVMType() + " : " + exception.getMessage();
+                return "Unable to provision " + exception.getVMType() + " : " + exception.getMessage()
+                        + (exception instanceof TooManyVirtualMachinesException ?
+                            " (Will retry automatically)" : "");
+
             } else {
                 return "Unable to provision " + exception.getHardwareSize() +
                         " from: " + exception.getVMType() + " : " + exception.getMessage();
             }
         }
-
     }
 
 
