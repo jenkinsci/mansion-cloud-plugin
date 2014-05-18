@@ -45,16 +45,7 @@ import java.util.logging.Logger;
 public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
     // MansionSlave, once gets created, is never reconfigured, so we can keep a reference like this.
     private final MansionSlave slave;
-
-    /**
-     * When the computer finished connecting. Milliseconds since epoch.
-     */
-    private Long launchedTime;
-
-    /**
-     * Keep track of whether a launch has been attempted.
-     */
-    private boolean launchAttempted = false;
+    private long creationTime = System.currentTimeMillis();
 
     MansionComputer(MansionSlave slave) {
         super(slave);
@@ -79,31 +70,6 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
         };
     }
 
-    /**
-     * When was this computer fully launched?
-     */
-    public @CheckForNull Long getLaunchedTime() {
-        return launchedTime;
-    }
-
-    /**
-     * Returns true if a connection hasn't been attempted.
-     *
-     * This is used to prevent prematurely removing computers
-     * which are created but have not called connect().
-     * 
-     * @return
-     */
-    public boolean isLaunchAttempted() {
-        return launchAttempted;
-    }
-
-    @Override
-    protected Future<?> _connect(boolean forceReconnect) {
-        launchAttempted = true;
-        return super._connect(forceReconnect);
-    }
-
     @Override
     protected void kill() {
         try {
@@ -119,22 +85,14 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
         }
     }
 
+    /**
+     * When was this computer created?
+     * @return
+     */
+    public long getCreationTime() {
+        return creationTime;
+    }
+
     private static final Logger LOGGER = Logger.getLogger(MansionComputer.class.getName());
 
-    @Extension
-    public static class MansionComputerListener extends ComputerListener {
-        @Override
-        public void onOnline(Computer c, TaskListener listener) throws IOException, InterruptedException {
-            if (c instanceof MansionComputer) {
-                ((MansionComputer)c).launchedTime = System.currentTimeMillis();
-            }
-        }
-
-        @Override
-        public void onLaunchFailure(Computer c, TaskListener taskListener) throws IOException, InterruptedException {
-            if (c instanceof MansionComputer) {
-                ((MansionComputer)c).launchedTime = System.currentTimeMillis();
-            }
-        }
-    }
 }

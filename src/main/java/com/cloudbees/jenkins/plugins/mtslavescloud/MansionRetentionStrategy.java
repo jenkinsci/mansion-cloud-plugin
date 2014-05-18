@@ -29,6 +29,7 @@ import hudson.slaves.OfflineCause;
 import hudson.util.TimeUnit2;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class MansionRetentionStrategy <T extends MansionComputer> extends CloudSlaveRetentionStrategy<T> {
@@ -37,7 +38,7 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
     public long check(T c) {
         long nextCheck = super.check(c);
 
-        if (c.isOffline() && !c.isConnecting() && c.isAcceptingTasks() && c.isLaunchAttempted()) {
+        if (c.isOffline() && !c.isConnecting() && c.isAcceptingTasks() && shouldHaveConnectedByNow(c)) {
             //take offline without syncing
             try {
                 MansionSlave node = c.getNode();
@@ -55,7 +56,11 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
      * For Mansion, we want don't want to consider idleness before the computer connects.
      */
     protected boolean isIdleForTooLong(T c) {
-        return c.getLaunchedTime() != null && System.currentTimeMillis()-Math.max(c.getIdleStartMilliseconds(),c.getLaunchedTime()) > getIdleMaxTime();
+        return (c.isOnline() || shouldHaveConnectedByNow(c)) && super.isIdleForTooLong(c);
+    }
+
+    private boolean shouldHaveConnectedByNow(T c) {
+        return System.currentTimeMillis() - c.getCreationTime() > TimeUnit.MINUTES.toMillis(2);
     }
 
     /**
