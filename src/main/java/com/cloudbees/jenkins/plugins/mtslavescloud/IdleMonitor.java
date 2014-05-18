@@ -48,7 +48,7 @@ public class IdleMonitor extends RunListener<Run> {
     }
 
     @Override
-    public void onCompleted(Run r, TaskListener listener) {
+    public void onFinalized(Run run) {
         Computer.threadPoolForRemoting.submit(new Callable<Void>() {
             public Void call() throws Exception {
                 // sleep long enough for a computer to become idle, if possible
