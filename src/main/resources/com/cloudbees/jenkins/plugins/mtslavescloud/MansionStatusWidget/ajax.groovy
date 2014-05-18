@@ -93,6 +93,12 @@ l.ajax {
                 shownSomething = true
             }
 
+            if (m.provisioning) {
+                row(null) {
+                    img (src:"${imagesURL}/spinner.gif",style:"margin: 0 auto; display: block;")
+                }
+                shownSomething = true
+            }
             if (!shownSomething) {
                 row("color:#888") {
                     div(align:"center", "idle")

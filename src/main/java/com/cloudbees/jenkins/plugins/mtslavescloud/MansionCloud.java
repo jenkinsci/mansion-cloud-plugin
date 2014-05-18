@@ -108,6 +108,11 @@ public class MansionCloud extends AbstractCloudImpl {
     private transient /*almost final*/ PlannedMansionSlaveSet inProgressSet;
 
     /**
+     * Is a call to the broker in progress?
+     */
+    private transient boolean provisioning = false;
+
+    /**
      * Caches {@link TokenGenerator} by keying it off from {@link CloudBeesUser} that provides its credential.
      */
     class Cache {
@@ -239,6 +244,7 @@ public class MansionCloud extends AbstractCloudImpl {
 
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
+            provisioning = true;
             for (int i=0; i<excessWorkload; i++) {
 
                 URL broker = new URL(this.broker,"/"+st.getMansionType()+"/");
@@ -266,6 +272,8 @@ public class MansionCloud extends AbstractCloudImpl {
             quotaProblems.addTooManyVMProblem(e);
         } catch (QuotaExceededException e) {
             quotaProblems.addProblem(e);
+        } finally {
+            provisioning = false;
         }
         return r;
     }
@@ -311,6 +319,10 @@ public class MansionCloud extends AbstractCloudImpl {
 
     public QuotaProblems getQuotaProblems() {
         return quotaProblems;
+    }
+
+    public boolean isProvisioning() {
+        return provisioning;
     }
 
     protected BackOffCounter getBackOffCounter(SlaveTemplate st) {
