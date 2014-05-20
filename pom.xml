@@ -116,7 +116,6 @@
       <groupId>com.cloudbees.jenkins.plugins</groupId>
       <artifactId>cloudbees-registration</artifactId>
       <version>3.14</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.cloudbees</groupId>
