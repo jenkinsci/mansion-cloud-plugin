@@ -62,6 +62,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
     public static final int LEASE_RENEWAL_PERIOD_SECONDS = Integer.getInteger(MansionSlave.class.getName() + ".LEASE_RENEWAL_PERIOD_SECONDS", 30);
     private final VirtualMachineRef vm;
     private final SlaveTemplate template;
+    private Long createdDate = System.currentTimeMillis();
 
     /**
      * Keeps track of the last renewal.
@@ -133,7 +134,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         try {
             FileSystemClan clan = template.getClan();
-            clan.update(vm.getState());
+            clan.update(vm.getState(), createdDate);
         } catch (IOException e) {
             e.printStackTrace(listener.error("Failed to update the file system clan"));
             LOGGER.log(Level.INFO, "Failed to update the file system clan", e);

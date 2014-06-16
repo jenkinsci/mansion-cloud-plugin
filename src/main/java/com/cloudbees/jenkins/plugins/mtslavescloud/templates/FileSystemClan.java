@@ -61,6 +61,8 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
      */
     private final transient SlaveTemplate template;
 
+    private Long lastDestroyDate = null;
+
     private final List<FileSystemLineage> lineages = new ArrayList<FileSystemLineage>();
 
     FileSystemClan(MansionCloud cloud, SlaveTemplate template) {
@@ -125,10 +127,14 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
     /**
      * Takes snapshots of the current file systems attached to the given VM and
      * use that as the latest generation of this clan.
+     *
+     * If the clan has been destroyed since the vmCreatedDate, no snapshot will be
+     * taken. This can happen when snapshots are 'cleared' while a VM is running.
      */
-    public void update(VirtualMachine vm) {
+    public void update(VirtualMachine vm, Long vmCreatedDate) {
         FileSystemsProperty fsp = vm.getProperty(FileSystemsProperty.class);
         if (fsp==null)  return;
+        if (lastDestroyDate != null && lastDestroyDate > vmCreatedDate) return;
 
         for (String persistedPath : template.getPersistentFileSystems()) {
             URL fs = fsp.getFileSystemUrlFor(persistedPath);
@@ -166,7 +172,14 @@ public class FileSystemClan implements Iterable<FileSystemLineage> {
                 LOGGER.log(Level.WARNING, "Failed to delete snapshot " +l.getSnapshot(), oce);
             }
         }
-        getPersistentFileSystemRecordFile().delete();
+        try {
+            lineages.clear();
+            lastDestroyDate = System.currentTimeMillis();
+            save();
+        } catch (IOException e) {
+            LOGGER.log(WARNING, "Failed to persist the clan",e);
+        }
+
         return HttpResponses.forwardToPreviousPage();
     }
 
