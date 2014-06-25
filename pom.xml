@@ -32,7 +32,7 @@
 
   <groupId>com.cloudbees.jenkins.plugins</groupId>
   <artifactId>mansion-cloud</artifactId>
-  <version>1.21</version>
+  <version>1.22-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <name>CloudBees Cloud Connector</name>
   <description>
