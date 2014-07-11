@@ -63,7 +63,8 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
      * For Mansion, we want don't want to consider idleness before the computer connects.
      */
     protected boolean isIdleForTooLong(T c) {
-        return (c.isOnline() || shouldHaveConnectedByNow(c)) && super.isIdleForTooLong(c);
+        return (c.isOnline() || shouldHaveConnectedByNow(c))
+                && System.currentTimeMillis()-c.getIdleStartMillisecondsAfterConnect() > getIdleMaxTime();
     }
 
     private boolean shouldHaveConnectedByNow(T c) {

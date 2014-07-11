@@ -24,7 +24,6 @@
 
 package com.cloudbees.jenkins.plugins.mtslavescloud;
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
 import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.TaskListener;
@@ -35,7 +34,6 @@ import hudson.slaves.ComputerListener;
 import org.acegisecurity.Authentication;
 
 import java.io.IOException;
-import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,6 +44,7 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
     // MansionSlave, once gets created, is never reconfigured, so we can keep a reference like this.
     private final MansionSlave slave;
     private long creationTime = System.currentTimeMillis();
+    private long onlineTime = 0;
 
     MansionComputer(MansionSlave slave) {
         super(slave);
@@ -94,5 +93,31 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
     }
 
     private static final Logger LOGGER = Logger.getLogger(MansionComputer.class.getName());
+
+    /**
+     * When did this computer become idle, considering when it actually came online.
+     *
+     * This is required because {@link Computer#connectTime} is set when the
+     * computer starts connecting, whereas {@link MansionComputer#onlineTime}
+     * is set <b>after</b> the connection completes.
+     *
+     * @return
+     */
+    public long getIdleStartMillisecondsAfterConnect() {
+        return Math.max(getIdleStartMilliseconds(), onlineTime);
+    }
+
+    /**
+     * Record when connection completes, for more accurate idle detection.
+     */
+    @Extension
+    public static class OnlineListener extends ComputerListener {
+
+        @Override
+        public void onOnline(Computer c, TaskListener listener) throws IOException, InterruptedException {
+            if (c != null && c instanceof MansionComputer)
+                ((MansionComputer) c).onlineTime = System.currentTimeMillis();
+        }
+    }
 
 }
