@@ -18,6 +18,7 @@ import org.kohsuke.stapler.interceptor.RequirePOST;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.collect.Iterators.concat;
@@ -94,7 +95,7 @@ public class QuotaProblems implements Iterable<QuotaProblems.QuotaProblem> {
      * General quota problems which we don't expect to change
      * unless a user upgrades, for example.
      */
-    private List<QuotaProblem> problems = new ArrayList<QuotaProblem>();
+    private List<QuotaProblem> problems = new CopyOnWriteArrayList<QuotaProblem>();
 
     /**
      * These problems indicate the account is using
@@ -102,7 +103,7 @@ public class QuotaProblems implements Iterable<QuotaProblems.QuotaProblem> {
      * over time, these problems are cleared automatically
      * so that the user doesn't have to take a manual action.
      */
-    private List<QuotaProblem> tooManyVmProblems = new ArrayList<QuotaProblem>();
+    private List<QuotaProblem> tooManyVmProblems = new CopyOnWriteArrayList<QuotaProblem>();
 
 
     public void addProblem(QuotaExceededException exception) {
