@@ -358,7 +358,7 @@ public class MansionCloud extends AbstractCloudImpl {
         private CloudBeesUser findUser() throws AbortException {
             // TODO: perhaps we should also let the user configure which credential to use?
             for (CloudBeesUser user : CredentialsProvider.lookupCredentials(CloudBeesUser.class)) {
-                if (user.getAccounts() != null)
+                if (user.getAccounts() != null && user.getAccounts().size() > 0)
                     return user;
             }
             throw new AbortException("No cloudbees account is registered with this Jenkins instance, or the password is incorrect." +
