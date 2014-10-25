@@ -60,7 +60,11 @@ public class BillingMemoBuilder extends RunListener<AbstractBuild> {
                 history = new BuildHistory();
             }
             history.add(run);
-            node.getNodeProperties().add(history);
+            try {
+                node.getNodeProperties().replace(history);
+            } catch (IOException x) {
+                Logger.getLogger(BillingMemoBuilder.class.getName()).log(Level.WARNING, null, x);
+            }
         }
     }
 
