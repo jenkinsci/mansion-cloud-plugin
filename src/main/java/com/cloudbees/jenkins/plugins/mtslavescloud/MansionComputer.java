@@ -45,10 +45,24 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
     private final MansionSlave slave;
     private long creationTime = System.currentTimeMillis();
     private long onlineTime = 0;
+    private boolean disconnectInProgress;
 
     MansionComputer(MansionSlave slave) {
         super(slave);
         this.slave = slave;
+    }
+
+    public synchronized boolean isDisconnectInProgress() {
+        return disconnectInProgress;
+    }
+
+    /*package*/ synchronized void setDisconnectInProgress(boolean disconnectInProgress) {
+        this.disconnectInProgress = disconnectInProgress;
+    }
+
+    @Override
+    public boolean isAcceptingTasks() {
+        return !isDisconnectInProgress() && super.isAcceptingTasks();
     }
 
     /**
