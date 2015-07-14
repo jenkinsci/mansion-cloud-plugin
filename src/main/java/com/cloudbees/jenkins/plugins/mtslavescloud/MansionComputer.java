@@ -85,17 +85,22 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
 
     @Override
     protected void kill() {
-        try {
-            super.kill();
-
-            // hack to avoid infinite recursion
-            // TODO: post 1.510, move this logic to onRemoved() and no need to call protected internal methods
-            slave._terminate(TaskListener.NULL);
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Failed to terminate "+getDisplayName());
-        } catch (InterruptedException e) {
-            LOGGER.log(Level.WARNING, "Failed to terminate " + getDisplayName());
-        }
+        // TODO: post 1.510, move this logic to onRemoved() and no need to call protected internal methods
+        // TODO: investigate if onRemoved() is reliably called for all node removal pathways
+        super.kill();
+        // the termination involves snapshot and other long running tasks, none of which require the queue lock held
+        // so push that work to a separate thread.
+        threadPoolForRemoting.submit(new Runnable() {
+            public void run() {
+                try {
+                    slave._terminate(TaskListener.NULL);
+                } catch (IOException e) {
+                    LOGGER.log(Level.WARNING, "Failed to terminate " + getDisplayName(), e);
+                } catch (InterruptedException e) {
+                    LOGGER.log(Level.WARNING, "Failed to terminate " + getDisplayName(), e);
+                }
+            }
+        });
     }
 
     /**
