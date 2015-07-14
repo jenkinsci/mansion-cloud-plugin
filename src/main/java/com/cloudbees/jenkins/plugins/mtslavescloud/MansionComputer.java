@@ -85,7 +85,7 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
 
     @Override
     protected void kill() {
-        // TODO: post 1.510, move this logic to onRemoved() and no need to call protected internal methods
+        // TODO: post 1.510, move this logic to onRemoved() 
         // TODO: investigate if onRemoved() is reliably called for all node removal pathways
         super.kill();
         // the termination involves snapshot and other long running tasks, none of which require the queue lock held
