@@ -93,7 +93,7 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
         threadPoolForRemoting.submit(new Runnable() {
             public void run() {
                 try {
-                    slave._terminate(TaskListener.NULL);
+                    slave.terminate();
                 } catch (IOException e) {
                     LOGGER.log(Level.WARNING, "Failed to terminate " + getDisplayName(), e);
                 } catch (InterruptedException e) {
