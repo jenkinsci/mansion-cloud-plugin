@@ -229,12 +229,12 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
             return TimeUnit.SECONDS.toMillis(LEASE_RENEWAL_PERIOD_SECONDS);
         }
 
-        @Override
+        //@Override // TODO uncomment once Jenkins 1.551+ 
         protected Level getNormalLoggingLevel() {
             return Level.FINE;
         }
 
-        @Override
+        //@Override // TODO uncomment once Jenkins 1.565+
         protected Level getSlowLoggingLevel() {
             return Level.INFO;
         }
