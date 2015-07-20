@@ -42,9 +42,12 @@ import hudson.slaves.EphemeralNode;
 import hudson.slaves.NodeProperty;
 import hudson.util.TimeUnit2;
 import jenkins.model.Jenkins;
+import org.apache.commons.io.IOUtils;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Collections;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -82,11 +85,11 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
                 Collections.<NodeProperty<?>>emptyList());
         this.vm = vm;
         this.template = template;
-
-        // suspend retention strategy until we do the initial launch
-        this.holdOffLaunchUntilSave = true;
     }
 
+    public SlaveTemplate getTemplate() {
+        return template;
+    }
 
     /**
      * Compute ID from {@link VirtualMachineRef#getId()}.
@@ -102,9 +105,42 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
             return id;
     }
 
-    protected void cancelHoldOff() {
-        // resume the retention strategy work that we've suspended in the constructor
-        holdOffLaunchUntilSave = false;
+    public static String getSlaveLog(MansionSlave s) {
+        if (s==null)    return "(null slave)";
+        Computer c = s.toComputer();
+        if (c==null)    return "(null computer)";
+        try {
+            return c.getLog();
+        } catch (IOException e) {
+            StringWriter w = new StringWriter();
+            try {
+                w.append('(').append(e.getMessage()).append(")\n");
+                PrintWriter pw = new PrintWriter(w);
+                try {
+                    e.printStackTrace(pw);
+                } finally {
+                    IOUtils.closeQuietly(pw);
+                }
+                return w.toString();
+            } finally {
+                IOUtils.closeQuietly(w);;
+            }
+        }
+    }
+    
+    public void updateStatus(String status) {
+        for (MansionCloud cloud: Jenkins.getInstance().clouds.getAll(MansionCloud.class)) {
+            for (PlannedMansionSlave p: cloud.getInProgressSet()) {
+                if (p.getNode() == this) {
+                    p.setStatus(status);
+                    return;
+                }
+            }
+        }
+    }
+    
+    public MansionComputer asComputer() {
+        return (MansionComputer) toComputer();
     }
 
     @Override
@@ -132,6 +168,15 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
 
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
+        OUTER:
+        for (MansionCloud cloud: Jenkins.getInstance().clouds.getAll(MansionCloud.class)) {
+            for (PlannedMansionSlave p: cloud.getInProgressSet()) {
+                if (p.getNode() == this) {
+                    p.onTerminate();
+                    break OUTER;
+                }
+            }
+        }
         try {
             FileSystemClan clan = template.getClan();
             clan.update(vm.getState(), createdDate);
@@ -158,6 +203,17 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
         }
     }
 
+    public void onConnectFailure(String message) {
+        for (MansionCloud cloud : Jenkins.getInstance().clouds.getAll(MansionCloud.class)) {
+            for (PlannedMansionSlave p : cloud.getInProgressSet()) {
+                if (p.getNode() == this) {
+                    p.onConnectFailure(new IOException(message + "\nLauncher log:\n" + getSlaveLog(this)));
+                    return;
+                }
+            }
+        }
+    }
+
     @Extension
     public static class MansionLeaseRenewal extends AsyncPeriodicWork {
 
@@ -171,6 +227,16 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
         @Override
         public long getRecurrencePeriod() {
             return TimeUnit.SECONDS.toMillis(LEASE_RENEWAL_PERIOD_SECONDS);
+        }
+
+        @Override
+        protected Level getNormalLoggingLevel() {
+            return Level.FINE;
+        }
+
+        @Override
+        protected Level getSlowLoggingLevel() {
+            return Level.INFO;
         }
 
         @Override
@@ -203,6 +269,9 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
                 }
                 for (MansionCloud c : filter(jenkins.clouds, MansionCloud.class)) {
                     for (PlannedMansionSlave s : c.getInProgressSet()) {
+                        if (s.isProvisioning()) {
+                            continue;
+                        }
                         try {
                             Thread.currentThread().setName(originalThreadName + " - renewing " + s.getVm().getId());
                             s.renewLease();
@@ -212,6 +281,7 @@ public class MansionSlave extends AbstractCloudSlave implements EphemeralNode {
                             // move on to the next one
                         }
                     }
+                    c.getInProgressSet().update();
                 }
             } finally {
                 Thread.currentThread().setName(originalThreadName);

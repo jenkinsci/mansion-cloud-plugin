@@ -30,6 +30,7 @@ import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.slaves.CloudSlaveRetentionStrategy;
 import hudson.util.TimeUnit2;
+import hudson.util.VersionNumber;
 import jenkins.model.Jenkins;
 
 import java.io.IOException;
@@ -46,23 +47,53 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
 
     private transient volatile boolean disconnectInProgress;
     
+    private static final boolean NEED_SLEEP_BEFORE_KILL = 
+            Jenkins.getVersion() == null || Jenkins.getVersion().isOlderThan(new VersionNumber("1.607"));
+
     @Override
     public long check(T c) {
         long nextCheck = super.check(c);
-
+        if (c.isOffline() && !c.isInitialConnectionEstablished() && !c.isConnecting()) {
+            int attempts = c.getConnectionAttempts();
+            MansionSlave node = c.getNode();
+            LOGGER.log(Level.INFO, "Failed to connect to slave over ssh (try #{0})\nLauncher log:\n{1}",
+                    new Object[]{attempts, node == null ? "(unavailable)" : MansionSlave.getSlaveLog(node)});
+            if (attempts < 10) {
+                c.connect(false);
+                return 1;
+            } else if (attempts >= 10) {
+                try {
+                    if (node!=null) {
+                        node.onConnectFailure(String.format("Failed to connect to slave over ssh (try #%d)", attempts));
+                        // rare, but n==null if the node is deleted and being checked roughly at the same time
+                        kill(node);
+                    }
+                } catch (IOException e) {
+                    LOGGER.log(Level.WARNING, "Failed to take slave offline: {0}", c.getName());
+                }
+            }
+        }
+        
         if (c.isOffline() && !c.isConnecting() && c.isAcceptingTasks() && shouldHaveConnectedByNow(c)) {
-            LOGGER.fine("Removing "+c.getName()+" because it should have connected by now");
+            LOGGER.log(Level.FINE, "Removing {0} because it should have connected by now", c.getName());
             //take offline without syncing
             try {
                 MansionSlave node = c.getNode();
-                if (node!=null)    // rare, but n==null if the node is deleted and being checked roughly at the same time
-                    super.kill(node);
+                if (node!=null) {
+                    // rare, but n==null if the node is deleted and being checked roughly at the same time
+                    _kill(node);
+                }
             } catch (IOException e) {
-                LOGGER.warning("Failed to take slave offline: " + c.getName());
+                LOGGER.log(Level.WARNING, "Failed to take slave offline: {0}", c.getName());
             }
         }
 
         return nextCheck;
+    }
+
+    @Override
+    public void start(T c) {
+        c.connect(true);
     }
 
     /**
@@ -78,7 +109,11 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
     }
 
     @Override
-    protected void kill(final Node n) throws IOException {       
+    protected void kill(final Node n) throws IOException {
+        _kill(n);
+    }
+
+    private void _kill(final Node n) throws IOException {       
         final MansionComputer computer = (MansionComputer) n.toComputer();
         
         final String nodeName = n.getNodeName();
@@ -96,24 +131,24 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
         }
         Computer.threadPoolForRemoting.submit(new Runnable() {
             public void run() {
-                // TODO once Jenkins 1.607+ we can remove the sleep as the withLock will give atomic guarantee
-
-                // attempt to heuristically detect a race condition
-                // where an executor accepted a task after we checked for
-                // idleness,
-                // but before we marked it as unavailable for tasks
-                // See JENKINS-23676
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    LOGGER.log(Level.FINE, "Interrupted while sleeping before removing node {0}", nodeName);
-                    return;
+                if (NEED_SLEEP_BEFORE_KILL) {
+                    // attempt to heuristically detect a race condition
+                    // where an executor accepted a task after we checked for
+                    // idleness,
+                    // but before we marked it as unavailable for tasks
+                    // See JENKINS-23676, fixed in Jenkins 1.607+
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        LOGGER.log(Level.FINE, "Interrupted while sleeping before removing node {0}", nodeName);
+                        return;
+                    }
                 }
                 
                 queueLock.withLock(new Runnable() {
                     public void run() {
                         if (!computer.isIdle() && computer.isOnline()) {
-                            LOGGER.log(FINE, computer.getName() + " is no longer idle, aborting termination.");
+                            LOGGER.log(FINE, "{0} is no longer idle, aborting termination.", computer.getName());
                             // we lost the race -- mark it as back online
                             computer.setAcceptingTasks(true);
                             computer.setDisconnectInProgress(false);
@@ -127,7 +162,7 @@ public class MansionRetentionStrategy <T extends MansionComputer> extends CloudS
                             for (Executor e : computer.getExecutors()) {
                                 e.interrupt();
                             }
-                            LOGGER.log(Level.FINE, "Finally removing node " + n.getNodeName());
+                            LOGGER.log(Level.FINE, "Finally removing node {0}", n.getNodeName());
                             MansionRetentionStrategy.super.kill(n);
                         } catch (IOException e) {
                             computer.setAcceptingTasks(true);

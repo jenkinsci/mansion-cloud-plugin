@@ -89,8 +89,10 @@ l.ajax {
 
             // in-progress allocations
             m.inProgressSet.each { PlannedMansionSlave s ->
-                include(s,"status")
-                shownSomething = true
+                if (!s.provisioning) {
+                    include(s, "status")
+                    shownSomething = true
+                }
             }
 
             if (m.provisioning) {
