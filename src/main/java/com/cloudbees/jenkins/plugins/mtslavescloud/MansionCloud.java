@@ -50,6 +50,7 @@ import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.Cloud;
+import hudson.slaves.NodeProvisioner;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.DescribableList;
 import hudson.util.HttpResponses;
@@ -195,14 +196,15 @@ public class MansionCloud extends AbstractCloudImpl {
     }
 
     /**
-     * Determines which labels the {@NodeProvisioner will request this Cloud to provision.
+     * Determines which labels the {@link NodeProvisioner} will request this Cloud to provision.
      *
      * @param label
      * @return true if the label is a valid template
      */
     @Override
     public boolean canProvision(Label label) {
-        SlaveTemplate st = SlaveTemplateList.get().get(label);
+        SlaveTemplateList list = SlaveTemplateList.get();
+        SlaveTemplate st = list == null ? null : list.get(label);
         return st!=null && st.isEnabled();
     }
 
