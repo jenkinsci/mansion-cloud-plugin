@@ -27,13 +27,17 @@ package com.cloudbees.jenkins.plugins.mtslavescloud;
 import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.TaskListener;
+import hudson.remoting.Channel;
 import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.slaves.AbstractCloudComputer;
 import hudson.slaves.ComputerListener;
+import net.jcip.annotations.GuardedBy;
 import org.acegisecurity.Authentication;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,6 +50,10 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
     private long creationTime = System.currentTimeMillis();
     private long onlineTime = 0;
     private boolean disconnectInProgress;
+    @GuardedBy("this")
+    private boolean initialConnectionEstablished;
+    @GuardedBy("this")
+    private int connectionAttempts;
 
     MansionComputer(MansionSlave slave) {
         super(slave);
@@ -58,6 +66,29 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
 
     /*package*/ synchronized void setDisconnectInProgress(boolean disconnectInProgress) {
         this.disconnectInProgress = disconnectInProgress;
+    }
+    
+    public synchronized boolean isInitialConnectionEstablished() {
+        return initialConnectionEstablished;
+    }
+
+    public synchronized int getConnectionAttempts() {
+        return connectionAttempts;
+    }
+
+    @Override
+    protected Future<?> _connect(boolean forceReconnect) {
+        if (getChannel()==null && (forceReconnect || !isConnecting())) {
+            synchronized (this) {
+                connectionAttempts++;
+                updateStatus("Connecting #" + connectionAttempts);
+            }
+        }
+        return super._connect(forceReconnect);
+    }
+
+    public void updateStatus(String status) {
+        slave.updateStatus(status);
     }
 
     @Override
@@ -101,6 +132,20 @@ public class MansionComputer extends AbstractCloudComputer<MansionSlave> {
                 }
             }
         });
+    }
+
+    @Override
+    public void setChannel(Channel channel, OutputStream launchLog, Channel.Listener listener)
+            throws IOException, InterruptedException {
+        try {
+            super.setChannel(channel, launchLog, listener);
+        } finally {
+            if (channel != null) {
+                synchronized (this) {
+                    initialConnectionEstablished = true;
+                }
+            }
+        }
     }
 
     /**

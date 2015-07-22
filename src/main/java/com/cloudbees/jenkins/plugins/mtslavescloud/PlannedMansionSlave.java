@@ -36,11 +36,14 @@ import com.cloudbees.mtslaves.client.VirtualMachineSpec;
 import com.cloudbees.mtslaves.client.properties.SshdEndpointProperty;
 import com.trilead.ssh2.signature.RSAPublicKey;
 import com.trilead.ssh2.signature.RSASHA1Verify;
+import hudson.Extension;
 import hudson.Main;
 import hudson.model.Computer;
 import hudson.model.Label;
 import hudson.model.Node;
+import hudson.model.TaskListener;
 import hudson.plugins.sshslaves.SSHLauncher;
+import hudson.slaves.ComputerListener;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.HttpResponses;
 import hudson.util.IOException2;
@@ -53,6 +56,7 @@ import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.concurrent.Callable;
@@ -60,6 +64,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.*;
@@ -74,11 +79,10 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      * Cloud that this slave is being provisioned from.
      */
     private final MansionCloud cloud;
-
     /**
      * Virtual machine on the mtslaves cloud that we are making a slave out of.
      */
-    private final VirtualMachineRef vm;
+    private VirtualMachineRef vm;
 
     /**
      * Templates that this slave is instantiating.
@@ -113,27 +117,36 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      * When did we start provisioning this guy?
      */
     public final long startTime = System.currentTimeMillis();
+    
+    /**
+     * The node that was provisioned.
+     */
+    public volatile MansionSlave node;
 
-
-    public PlannedMansionSlave(Label label, SlaveTemplate template, VirtualMachineRef vm) {
-        super(vm.getId(), new PromisedFuture<Node>(), 1);
+    public PlannedMansionSlave(Label label, SlaveTemplate template) {
+        super(template.getDisplayName(), new PromisedFuture<Node>(), 1);
         this.st = template;
         this.cloud = template.getMansion();
-        this.vm = vm;
         this.label = label;
 
         cloud.getInProgressSet().onStarted(this);
 
-        status = "Allocated "+displayName;
-        // start allocation
-        promise().setBase(Computer.threadPoolForRemoting.submit(this));
+        status = "Requesting";
     }
 
+    public String getDisplayName() {
+        return vm == null ? displayName : vm.getId();
+    }
+    
+    public boolean isProvisioning() {
+        return spent == 0 && vm == null;
+    }
+    
     /**
      * Returns the path this this object in the URL space relative to the context path
      */
     public String getUrl() {
-        return "cloud/"+cloud.name+"/inProgressSet/"+displayName;
+        return "cloud/"+cloud.name+"/inProgressSet/"+getDisplayName();
     }
 
     /**
@@ -158,6 +171,48 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
         return vm;
     }
 
+    public void onVirtualMachineProvisioned(@Nonnull VirtualMachineRef vm) {
+        vm.getClass(); // throw NPE if null
+        if (this.vm == null) {
+            this.vm = vm;
+            // start allocation
+            promise().setBase(Computer.threadPoolForRemoting.submit(this));
+        } else {
+            throw new IllegalStateException("VirtualMachineRef already allocated");
+        }
+        
+    }
+    
+    public void onProvisioningFailure(final Throwable e) {
+        promise().setBase(new Future<Node>() {
+            @Override
+            public boolean cancel(boolean mayInterruptIfRunning) {
+                return false;
+            }
+
+            @Override
+            public boolean isCancelled() {
+                return false;
+            }
+
+            @Override
+            public boolean isDone() {
+                return true;
+            }
+
+            @Override
+            public Node get() throws InterruptedException, ExecutionException {
+                throw new ExecutionException(e);
+            }
+
+            @Override
+            public Node get(long timeout, TimeUnit unit)
+                    throws InterruptedException, ExecutionException, TimeoutException {
+                throw new ExecutionException(e);
+            }
+        });
+    }
+
     public String getStatus() {
         return status;
     }
@@ -179,12 +234,16 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
         Thread t = Thread.currentThread();
 
         final String oldName = t.getName();
-        t.setName(oldName + " : provisioning " + vm.url);
         final ClassLoader oldCL = t.getContextClassLoader();
         t.setContextClassLoader(getClass().getClassLoader());
-
         try {
+            t.setName(oldName + " : allocated " + vm.url);
+            status = "Allocated "+vm.getId();
+            LOGGER.log(Level.FINE, "Allocated {0}", vm.url);
+
             status = "Configuring";
+
+            t.setName(oldName + " : configuring " + vm.url);
 
             final VirtualMachineSpec spec = new VirtualMachineSpec();
             for (MansionVmConfigurator configurator : MansionVmConfigurator.all()) {
@@ -222,78 +281,22 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
             if (INJECT_FAULT)
                 throw new IllegalStateException("Injected failure");
 
+            t.setName(oldName + " : booting " + vm.url);
+
             status = "Booting";
             vm.bootSync();
             LOGGER.fine("Booted " + vm.url);
 
-            status = "Connecting";
+            status = "Provisioned";
             SshdEndpointProperty sshd = vm.getState().getProperty(SshdEndpointProperty.class);
-            SSHLauncher launcher = new SSHLauncher(
+            SSHLauncher launcher = new SSHLauncher(sshd.getHost(), sshd.getPort(), sshCred,
                     // Linux slaves can run without it, but OS X slaves need java.awt.headless=true
-                    sshd.getHost(), sshd.getPort(), sshCred, "-Djava.awt.headless=true", null, null, null);
-            MansionSlave s = new MansionSlave(vm,st,label,launcher);
-            IOException lastConnectionException = null;
-            try {
-                // connect before we declare victory
-                // If we declare
-                // the provisioning complete by returning without the connect
-                // operation, NodeProvisioner may decide that it still wants
-                // one more instance, because it sees that (1) all the slaves
-                // are offline (because it's still being launched) and
-                // (2) there's no capacity provisioned yet.
-                //
-                // deferring the completion of provisioning until the launch
-                // goes successful prevents this problem.
-                Jenkins.getInstance().addNode(s);
-                for (int tries = 1; tries <= 10; tries++) {
-                    if (tries>1)
-                        status = "Connecting #"+tries;
-                    Thread.sleep(500);
-                    Computer c = s.toComputer();
-                    if (c==null)
-                        throw new IOException("Failed to connect to slave. Computer is gone");
-                    Future<?> connect = c.connect(false);
-                    try {
-                        // set some time out to avoid infinite blockage, which was observed during test
-                        connect.get(5, TimeUnit.MINUTES);
-                        cloud.getBackOffCounter(st).clear();
-                        break;
-                    } catch (ExecutionException e) {
-                        if (! (e.getCause() instanceof IOException))
-                            throw e;
-                        else
-                            lastConnectionException = (IOException) e.getCause();
-                        LOGGER.log(INFO, "Failed to connect to slave over ssh (try #" + tries + ")", e);
-                        LOGGER.log(INFO,"Launcher log:\n"+ getSlaveLog(s));
-                    } catch (TimeoutException e) {
-                        // connect is likely hanging. Don't let it linger forever. Just kill it
-                        connect.cancel(true);
-
-                        throw new IOException("Failed to connect to slave over ssh (try #"+tries+")\nLauncher log:\n"+getSlaveLog(s));
-                    }
-                }
-            } finally {
-                s.cancelHoldOff();
-            }
-
-            if (s.toComputer().isOffline()) {
-                // if we can't connect, backoff before the next try
-                throw new IOException2("Failed to connect to slave over ssh:\nLog text:\n"+getSlaveLog(s), lastConnectionException);
-            }
-
-            status = "Online";
-            return s;
+                    "-Djava.awt.headless=true", null, null, null, null, 180, 10, 1);
+            return node = new MansionSlave(vm,st,label,launcher);
         } finally {
             t.setName(oldName);
             t.setContextClassLoader(oldCL);
         }
-    }
-
-    private String getSlaveLog(MansionSlave s) throws IOException {
-        if (s==null)    return "(null slave)";
-        Computer c = s.toComputer();
-        if (c==null)    return "(null computer)";
-        return c.getLog();
     }
 
     // TODO: move this to instance-identity-module
@@ -343,7 +346,10 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
             status = "Failed";
             cloud.getBackOffCounter(st).recordError();
         } else {
-            status = "Completed";
+            MansionSlave node = this.node;
+            if (node != null && node.getChannel() != null) {
+                status = "Completed";
+            }
         }
 
         cloud.getInProgressSet().update();
@@ -362,8 +368,14 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      */
     protected boolean isNoteWorthy() {
         if (spent==0)     return true;    // in progress
+        if (vm == null) return false; // never allocated
         if (problem!=null && System.currentTimeMillis() < spent+PROBLEM_RETENTION_SPAN && !dismissed)
             return true;    // recent enough failure
+        MansionSlave node = this.node;
+        if (node != null) {
+            final MansionComputer c = node.asComputer();
+            return c == null || !c.isInitialConnectionEstablished();
+        }
         return false;
     }
 
@@ -393,4 +405,49 @@ public class PlannedMansionSlave extends PlannedNode implements Callable<Node> {
      * Debug switch to inject a fault in slave allocation to test error handling.
      */
     public static boolean INJECT_FAULT = false;
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public MansionSlave getNode() {
+        return node;
+    }
+
+    public void onOnline() {
+        cloud.getBackOffCounter(st).clear();
+        node = null; // no longer interesting
+        status = "Online";
+        cloud.getInProgressSet().update();
+    }
+    
+    public void onTerminate() {
+        node = null;
+        cloud.getInProgressSet().update();
+    }
+    
+    public void onConnectFailure(Throwable problem) {
+        cloud.getBackOffCounter(st).recordError();
+        this.problem = problem;
+        status = "Could not connect";
+        cloud.getInProgressSet().update();
+    }
+
+    @Extension
+    public static class ComputerListenerImpl extends ComputerListener {
+        @Override
+        public void onOnline(Computer c, TaskListener listener) throws IOException, InterruptedException {
+            if (c instanceof MansionComputer) {
+                MansionSlave s = ((MansionComputer) c).getNode();
+                for (MansionCloud cloud: Jenkins.getInstance().clouds.getAll(MansionCloud.class)) {
+                    for (PlannedMansionSlave p: cloud.getInProgressSet()) {
+                        if (p.getNode() == s) {
+                            p.onOnline();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

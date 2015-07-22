@@ -38,7 +38,6 @@ import com.cloudbees.mtslaves.client.BrokerRef;
 import com.cloudbees.mtslaves.client.HardwareSpec;
 import com.cloudbees.mtslaves.client.QuotaExceededException;
 import com.cloudbees.mtslaves.client.TooManyVirtualMachinesException;
-import com.cloudbees.mtslaves.client.VirtualMachineRef;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.cloudbees.CloudBeesAccount;
 import com.cloudbees.plugins.credentials.cloudbees.CloudBeesUser;
@@ -46,15 +45,18 @@ import hudson.AbortException;
 import hudson.CopyOnWrite;
 import hudson.Extension;
 import hudson.Util;
+import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.Cloud;
+import hudson.slaves.NodeProvisioner;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.DescribableList;
 import hudson.util.HttpResponses;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
+import hudson.util.VersionNumber;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.HttpResponse;
@@ -66,13 +68,17 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.WARNING;
 
 /**
  * {@link Cloud} implementation that talks to CloudBees' multi-tenant slaves.
@@ -80,6 +86,9 @@ import static java.util.logging.Level.*;
  * @author Kohsuke Kawaguchi
  */
 public class MansionCloud extends AbstractCloudImpl {
+    private static final boolean NEED_OVERPROVISIONING_GUARD = 
+            Jenkins.getVersion() == null || Jenkins.getVersion().isOlderThan(new VersionNumber("1.607"));
+
     private final URL broker;
 
     /**
@@ -143,7 +152,7 @@ public class MansionCloud extends AbstractCloudImpl {
     private transient Exception lastException;
 
     public MansionCloud(URL broker) throws IOException {
-        this(broker,null,null);
+        this(broker, null, null);
     }
 
     @DataBoundConstructor
@@ -187,14 +196,15 @@ public class MansionCloud extends AbstractCloudImpl {
     }
 
     /**
-     * Determines which labels the {@NodeProvisioner will request this Cloud to provision.
+     * Determines which labels the {@link NodeProvisioner} will request this Cloud to provision.
      *
      * @param label
      * @return true if the label is a valid template
      */
     @Override
     public boolean canProvision(Label label) {
-        SlaveTemplate st = SlaveTemplateList.get().get(label);
+        SlaveTemplateList list = SlaveTemplateList.get();
+        SlaveTemplate st = list == null ? null : list.get(label);
         return st!=null && st.isEnabled();
     }
 
@@ -219,61 +229,128 @@ public class MansionCloud extends AbstractCloudImpl {
     }
 
     @Override
-    public Collection<PlannedNode> provision(final Label label, int excessWorkload) {
-        LOGGER.fine("Provisioning "+label+" workload="+excessWorkload);
+    public Collection<PlannedNode> provision(Label label, int excessWorkload) {
+        LOGGER.log(Level.FINE, "Provisioning {0} workload={1}", new Object[]{label, excessWorkload});
 
-        SlaveTemplate st = SlaveTemplateList.get().get(label);
-        if (st==null) {
-            LOGGER.fine("No slave template matching "+label);
+        final SlaveTemplate st = SlaveTemplateList.get().get(label);
+        if (st == null) {
+            LOGGER.log(Level.FINE, "No slave template matching {0}", label);
             return Collections.emptyList();
         }
         if (!st.isEnabled()) {
-            LOGGER.fine("Slave template is disabled "+st);
+            LOGGER.log(Level.FINE, "Slave template is disabled {0}", st);
             return Collections.emptyList();
         }
         if (getBackOffCounter(st).isBackOffInEffect()) {
-            LOGGER.fine("Back off in effect for "+st);
+            LOGGER.log(Level.FINE, "Back off in effect for {0}", st);
             return Collections.emptyList();
         }
-        HardwareSpec box = getBoxOf(st,label);
+        if (NEED_OVERPROVISIONING_GUARD) {
+            // this check is only needed on Jenkins < 1.607
+            int overEager = 0;
+            for (MansionSlave n : Util.filter(Jenkins.getInstance().getNodes(), MansionSlave.class)) {
+                if (n.getTemplate() == st) {
+                    MansionComputer c = n.asComputer();
+                    if (c != null && c.isOffline() && c.isConnecting()) {
+                        overEager += n.getNumExecutors();
+                    }
+                }
+            }
+            if (overEager > excessWorkload) {
+                LOGGER.log(Level.FINE,
+                        "Holding off additional provisioning for {0} until the {1} pending connections complete",
+                        new Object[]{st, overEager});
+                return Collections.emptyList();
+            } else if (overEager > 0) {
+                LOGGER.log(Level.FINE,
+                        "Reducing effective workload for {0} from requested {1} to {2} due to {3} pending " 
+                                + "connections",
+                        new Object[]{st, excessWorkload, excessWorkload - overEager, overEager});
+                excessWorkload -= overEager;
+            }
+        }
+
+        final HardwareSpec box = getBoxOf(st, label);
 
         if (getQuotaProblems().isBlocked(box, st)) {
-            LOGGER.fine("Provisioning blocked by quota problems.");
+            LOGGER.log(Level.FINE, "Provisioning of {0} blocked by quota problems.", st);
             return Collections.emptyList();
         }
 
+        String compat="";
+        if (st.getLabel().equals(SlaveTemplateList.M1_COMPATIBLE)) {
+            compat = " m1."+box.size;
+        }
+
+        if (box.size.equals("large")) {
+            compat += " standard";
+        } else if (box.size.equals("xlarge")) {
+            compat += " hi-speed";
+        }
+        label = Jenkins.getInstance().getLabel(st.getLabel()+" "+box.size+compat);
+
+        
+        final Queue<PlannedMansionSlave> queue = new ArrayBlockingQueue<PlannedMansionSlave>(excessWorkload);
         List<PlannedNode> r = new ArrayList<PlannedNode>();
-        try {
-            provisioning = true;
-            for (int i=0; i<excessWorkload; i++) {
-
-                URL broker = new URL(this.broker,"/"+st.getMansionType()+"/");
-                final VirtualMachineRef vm = new BrokerRef(broker,createAccessToken(broker)).createVirtualMachine(box);
-                LOGGER.fine("Allocated "+vm.url);
-
-                String compat="";
-                if (st.getLabel().equals(SlaveTemplateList.M1_COMPATIBLE)) {
-                    compat = " m1."+box.size;
+        for (int i = 0; i < excessWorkload; i++) {
+            PlannedMansionSlave plan = new PlannedMansionSlave(label, st);
+            queue.add(plan);
+            r.add(plan);
+        }
+        if (!queue.isEmpty()) {
+            Computer.threadPoolForRemoting.submit(new Runnable() {
+                @Override
+                public void run() {
+                    final int excessWorkload = queue.size();
+                    final long start = System.currentTimeMillis();
+                    final String oldName = Thread.currentThread().getName();
+                    PlannedMansionSlave slave;
+                    try {
+                        Thread.currentThread().setName(String.format("Provisioning %s workload %s since %tc / %s", 
+                                st.getLabel(), excessWorkload, new Date(), oldName));
+                        int i = 0;
+                        while (null != (slave = queue.poll())) {
+                            try {
+                                Thread.currentThread().setName(
+                                        String.format("Provisioning %s workload %s of %s since %tc / %s",
+                                                st.getLabel(), i++, excessWorkload, new Date(), oldName));
+                                URL broker = new URL(MansionCloud.this.broker, "/" + st.getMansionType() + "/");
+                                slave.onVirtualMachineProvisioned(
+                                        new BrokerRef(broker, createAccessToken(broker)).createVirtualMachine(box));
+                            } catch (IOException e) {
+                                handleException(st, "Failed to provision from " + this, e);
+                                slave.onProvisioningFailure(e);
+                                throw e;
+                            } catch (OauthClientException e) {
+                                handleException(st, "Authentication error from " + this, e);
+                                slave.onProvisioningFailure(e);
+                                throw e;
+                            } catch (TooManyVirtualMachinesException e) {
+                                quotaProblems.addTooManyVMProblem(e);
+                                slave.onProvisioningFailure(e);
+                                throw e;
+                            } catch (QuotaExceededException e) {
+                                quotaProblems.addProblem(e);
+                                slave.onProvisioningFailure(e);
+                                throw e;
+                            }
+                        }
+                    } catch (Error e) {
+                        while (null != (slave = queue.poll())) {
+                            slave.onProvisioningFailure(e);
+                        }
+                        throw e;
+                    } catch (Throwable e) {
+                        while (null != (slave = queue.poll())) {
+                            slave.onProvisioningFailure(e);
+                        }
+                    } finally {
+                        Thread.currentThread().setName(oldName);
+                        LOGGER.log(Level.INFO, "Provisioning {0} workload {1} took {2}ms", 
+                                new Object[]{st.getLabel(), excessWorkload, System.currentTimeMillis() - start});
+                    }         
                 }
-
-                if (box.size.equals("large")) {
-                    compat += " standard";
-                } else if (box.size.equals("xlarge")) {
-                    compat += " hi-speed";
-                }
-
-                r.add(new PlannedMansionSlave(Jenkins.getInstance().getLabel(st.getLabel()+" "+box.size+compat), st, vm));
-            }
-        } catch (IOException e) {
-            handleException(st, "Failed to provision from " + this, e);
-        } catch (OauthClientException e) {
-            handleException(st, "Authentication error from " + this, e);
-        } catch (TooManyVirtualMachinesException e) {
-            quotaProblems.addTooManyVMProblem(e);
-        } catch (QuotaExceededException e) {
-            quotaProblems.addProblem(e);
-        } finally {
-            provisioning = false;
+            });
         }
         return r;
     }
@@ -322,7 +399,12 @@ public class MansionCloud extends AbstractCloudImpl {
     }
 
     public boolean isProvisioning() {
-        return provisioning;
+        for (PlannedMansionSlave future: getInProgressSet()) {
+            if (future.isProvisioning()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected BackOffCounter getBackOffCounter(SlaveTemplate st) {

@@ -30,7 +30,7 @@ def l = namespace(lib.LayoutTagLib);
 tr(class:"no-wrap") {
     td(class:"pane",style:"width:1px; text-wrap:no-wrap") {// smallest possible width
         text("${my.mansionType}:")
-        a(href: my.shouldHyperlinkSlave()?my.vm.url:null, my.displayName)
+        a(href: my.shouldHyperlinkSlave()&&my.vm!=null?my.vm.url:null, my.displayName)
     }
     td(class:"pane") {
         if (my.problem==null)

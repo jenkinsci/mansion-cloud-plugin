@@ -78,7 +78,7 @@ public class PlannedMansionSlaveSet implements Iterable<PlannedMansionSlave> {
 
     public PlannedMansionSlave getDynamic(String id) {
         for (PlannedMansionSlave s : data) {
-            if (s.displayName.equals(id))
+            if (s.getDisplayName().equals(id))
                 return s;
         }
         return null;
