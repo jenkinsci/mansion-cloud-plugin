@@ -86,7 +86,7 @@ import static java.util.logging.Level.WARNING;
  * @author Kohsuke Kawaguchi
  */
 public class MansionCloud extends AbstractCloudImpl {
-    private static final boolean NEED_OVERPROVISIONING_GUARD = 
+    private static final boolean NEED_OVERPROVISIONING_GUARD =
             Jenkins.getVersion() == null || Jenkins.getVersion().isOlderThan(new VersionNumber("1.607"));
 
     private final URL broker;
@@ -232,6 +232,10 @@ public class MansionCloud extends AbstractCloudImpl {
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
         LOGGER.log(Level.FINE, "Provisioning {0} workload={1}", new Object[]{label, excessWorkload});
 
+        final int INITIAL_SLAVES_TO_START = 3;
+        final int MIN_SEC_TO_WAIT_BETWEEN_PROVISION_CYCLES = 120;
+        final int THRESHOLD_SLAVE_EXCESS_LIMIT = 4;
+
         final SlaveTemplate st = SlaveTemplateList.get().get(label);
         if (st == null) {
             LOGGER.log(Level.FINE, "No slave template matching {0}", label);
@@ -263,7 +267,7 @@ public class MansionCloud extends AbstractCloudImpl {
                 return Collections.emptyList();
             } else if (overEager > 0) {
                 LOGGER.log(Level.FINE,
-                        "Reducing effective workload for {0} from requested {1} to {2} due to {3} pending " 
+                        "Reducing effective workload for {0} from requested {1} to {2} due to {3} pending "
                                 + "connections",
                         new Object[]{st, excessWorkload, excessWorkload - overEager, overEager});
                 excessWorkload -= overEager;
@@ -289,9 +293,68 @@ public class MansionCloud extends AbstractCloudImpl {
         }
         label = Jenkins.getInstance().getLabel(st.getLabel()+" "+box.size+compat);
 
-        
+
         final Queue<PlannedMansionSlave> queue = new ArrayBlockingQueue<PlannedMansionSlave>(excessWorkload);
         List<PlannedNode> r = new ArrayList<PlannedNode>();
+
+        /**
+         * The current approach - fire up as much slaves as we can - is pretty broken.
+         * Does not respect the mansion's resources and actually causes a lot of timeouts,
+         * and leaves a lot of lxcs in a pretty bad state.
+         *
+         * A much better approach is to limit the number of provisioned slaves per M min.
+         * Initially fire up N slaves. After S seconds (60-120-240?) if the build queue is still there,
+         * fire up another (N-1) slaves. Increase the number of the slaves gradually and not in bursts.
+         *
+         * The customers will appreciate it, because they don't want to see a lot of failed provisioning requests,
+         * but stable, running builds which can be achieved by the gradually started slaves.
+         *
+         * This change not also reduces the load on the mansions, but on the masters as well.
+         *
+         */
+        long currentEpoch = System.currentTimeMillis()/1000;
+
+        int currentNumberOfSlaves = 0;
+        for (MansionSlave n : Util.filter(Jenkins.getInstance().getNodes(), MansionSlave.class)) {
+            currentNumberOfSlaves++;
+
+        }
+        LOGGER.log(Level.INFO, "We have {0} slaves, excessWorkload = {1}", new Object[]{currentNumberOfSlaves, excessWorkload});
+        // If we don't have slaves at all we need to launch immediately
+        if ( currentNumberOfSlaves == 0 ) {
+            //Reduce the number of the initial slaves only when it wants to fire up too many at the same time,
+            if ( excessWorkload > INITIAL_SLAVES_TO_START ) {
+                excessWorkload = INITIAL_SLAVES_TO_START;
+            }
+            lastLaunchedSlaveTimeInEpoch = currentEpoch;
+        /**
+         * We already have a few slaves, but still need more slaves.
+         * Only start them after M min and only N -1
+         */
+        } else {
+            if ( excessWorkload >= THRESHOLD_SLAVE_EXCESS_LIMIT ) {
+                // We want to fire up more slaves after M min from the previous launch
+                if (currentEpoch - lastLaunchedSlaveTimeInEpoch > MIN_SEC_TO_WAIT_BETWEEN_PROVISION_CYCLES) {
+                    lastLaunchedSlaveTimeInEpoch = currentEpoch;
+                    excessWorkload = INITIAL_SLAVES_TO_START - 1;
+                } else {
+                    /**
+                     * Don't fire up more servers if we already have a few slaves
+                     * and the MIN_SEC_TO_WAIT_BETWEEN_PROVISION_CYCLES hasn't passed
+                     */
+                    excessWorkload = 0;
+                }
+            } else {
+                /**
+                 * Don't start slaves neither even if they're below the threshold excess limit,
+                 * but slaves were fired up recently. Wait a few more cycles. The build queue should go away.
+                 */
+                if (currentEpoch - lastLaunchedSlaveTimeInEpoch <= MIN_SEC_TO_WAIT_BETWEEN_PROVISION_CYCLES) {
+                    excessWorkload = 0;
+                }
+            }
+        }
+
         for (int i = 0; i < excessWorkload; i++) {
             PlannedMansionSlave plan = new PlannedMansionSlave(label, st);
             queue.add(plan);
@@ -306,7 +369,7 @@ public class MansionCloud extends AbstractCloudImpl {
                     final String oldName = Thread.currentThread().getName();
                     PlannedMansionSlave slave;
                     try {
-                        Thread.currentThread().setName(String.format("Provisioning %s workload %s since %tc / %s", 
+                        Thread.currentThread().setName(String.format("Provisioning %s workload %s since %tc / %s",
                                 st.getLabel(), excessWorkload, new Date(), oldName));
                         int i = 0;
                         while (null != (slave = queue.poll())) {
@@ -346,9 +409,9 @@ public class MansionCloud extends AbstractCloudImpl {
                         }
                     } finally {
                         Thread.currentThread().setName(oldName);
-                        LOGGER.log(Level.INFO, "Provisioning {0} workload {1} took {2}ms", 
+                        LOGGER.log(Level.INFO, "Provisioning {0} workload {1} took {2}ms",
                                 new Object[]{st.getLabel(), excessWorkload, System.currentTimeMillis() - start});
-                    }         
+                    }
                 }
             });
         }
@@ -473,4 +536,6 @@ public class MansionCloud extends AbstractCloudImpl {
      * we continuously have problems provisioning or launching slaves.
      */
     public static Long MAX_BACKOFF_SECONDS = Long.getLong(MansionCloud.class.getName() + ".maxBackOffSeconds", 600);  // 5 minutes
+
+    public long lastLaunchedSlaveTimeInEpoch = System.currentTimeMillis()/1000;
 }
