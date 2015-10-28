@@ -32,7 +32,7 @@
 
   <groupId>com.cloudbees.jenkins.plugins</groupId>
   <artifactId>mansion-cloud</artifactId>
-  <version>1.28-SNAPSHOT</version>
+  <version>1.28</version>
   <packaging>hpi</packaging>
   <name>CloudBees Cloud Connector</name>
   <description>
@@ -44,7 +44,7 @@
     <connection>scm:git:git://github.com/jenkinsci/mansion-cloud-plugin.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jenkinsci/mansion-cloud-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/mansion-cloud-plugin</url>
-    <tag>HEAD</tag>
+    <tag>mansion-cloud-1.28</tag>
   </scm>
 
   <dependencies>
