@@ -27,6 +27,7 @@
         "id" : "android",
         "displayName" : "DEV@cloud Standard Linux with Upgradable Android Installation",
         "mansionType": "lxc",
+        "nameMatchRequired": true,
         "spec" : {
             "configs" : [
                 {
@@ -56,6 +57,7 @@
         "id" : "osx",
         "displayName" : "DEV@cloud Standard Mac OS X (Beta)",
         "mansionType": "osx",
+        "nameMatchRequired": true,
         "spec" : {
             "configs" : [
                 {
