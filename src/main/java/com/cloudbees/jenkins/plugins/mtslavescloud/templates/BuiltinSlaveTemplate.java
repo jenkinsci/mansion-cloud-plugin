@@ -25,6 +25,8 @@
 package com.cloudbees.jenkins.plugins.mtslavescloud.templates;
 
 import hudson.Extension;
+import hudson.model.Label;
+import hudson.util.VariableResolver;
 import net.sf.json.JSONObject;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -46,6 +48,8 @@ public class BuiltinSlaveTemplate extends SlaveTemplate {
     private transient List<String> persistentFileSystems;
 
     private transient String spec;
+
+    private transient boolean nameMatchRequired;
 
     public BuiltinSlaveTemplate(String name) {
         super(name);
@@ -81,6 +85,14 @@ public class BuiltinSlaveTemplate extends SlaveTemplate {
         this.persistentFileSystems = persistentFileSystems;
     }
 
+    public boolean isNameMatchRequired() {
+        return nameMatchRequired;
+    }
+
+    @JsonProperty("nameMatchRequired")
+    public void setNameMatchRequired(boolean nameMatchRequired) {
+        this.nameMatchRequired = nameMatchRequired;
+    }
 
     @Override
     public JSONObject createSpec() {
@@ -97,6 +109,48 @@ public class BuiltinSlaveTemplate extends SlaveTemplate {
      */
     public boolean hasSpec() {
         return spec!=null;
+    }
+
+    /**
+     * Checks if this slave template matches the given label.
+     *
+     * This recognizes the size specifier "small" and "large" aside from the main label
+     */
+    @Override
+    public boolean matches(Label label) {
+        if (nameMatchRequired) {
+            final boolean[] haveName = new boolean[1];
+            return label.matches(new VariableResolver<Boolean>() {
+                public Boolean resolve(String name) {
+                    if (name.equals(getLabel())) {
+                        haveName[0] = true;
+                    }
+                    return name.equals(getLabel()) || name.equals("small") || name.equals("large") || name
+                            .equals("xlarge")
+                            || name.equals("standard") || name.equals("hi-speed");
+                }
+            }) && haveName[0];
+        }
+        return super.matches(label);
+    }
+
+    /**
+     * Checks if the given label matches this slave template with the specific hardware size.
+     */
+    @Override
+    public boolean matches(Label label, final String size) {
+        if (nameMatchRequired) {
+            final boolean[] haveName = new boolean[1];
+            return label.matches(new VariableResolver<Boolean>() {
+                public Boolean resolve(String name) {
+                    if (name.equals(getLabel())) {
+                        haveName[0] = true;
+                    }
+                    return name.equals(getLabel()) || name.equals(size);
+                }
+            }) && haveName[0];
+        }
+        return super.matches(label, size);
     }
 
     @Extension
