@@ -121,8 +121,6 @@ public class MansionCloud extends AbstractCloudImpl {
      */
     private transient boolean provisioning = false;
 
-    private long lastLaunchedSlaveTimeMillis = System.currentTimeMillis();
-
     /**
      * Caches {@link TokenGenerator} by keying it off from {@link CloudBeesUser} that provides its credential.
      */
@@ -234,9 +232,9 @@ public class MansionCloud extends AbstractCloudImpl {
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
         LOGGER.log(Level.FINE, "Provisioning {0} workload={1}", new Object[]{label, excessWorkload});
 
-        final int INITIAL_SLAVES_TO_START = Integer.getInteger(MansionCloud.class.getName() + ".initial_slaves_to_start", 3);
-        final int MIN_SEC_TO_WAIT_BETWEEN_PROVISION_CYCLES = Integer.getInteger(MansionCloud.class.getName() + ".min_sec_to_wait_between_proision_cycles", 120);
-        final int THRESHOLD_SLAVE_EXCESS_LIMIT = Integer.getInteger(MansionCloud.class.getName() + ".threshold_slave_excess_limit", 4);
+        final int INITIAL_SLAVES_TO_START = 3;
+        final int MIN_SEC_TO_WAIT_BETWEEN_PROVISION_CYCLES = 120;
+        final int THRESHOLD_SLAVE_EXCESS_LIMIT = 4;
 
         final SlaveTemplate st = SlaveTemplateList.get().get(label);
         if (st == null) {
@@ -300,8 +298,11 @@ public class MansionCloud extends AbstractCloudImpl {
         List<PlannedNode> r = new ArrayList<PlannedNode>();
 
         /**
-         * The approach here is to limit the number of provisioned slaves per M min to protect
-         * the mansion resources.
+         * The current approach - fire up as much slaves as we can - is pretty broken.
+         * Does not respect the mansion's resources and actually causes a lot of timeouts,
+         * and leaves a lot of lxcs in a pretty bad state.
+         *
+         * A much better approach is to limit the number of provisioned slaves per M min.
          * Initially fire up N slaves. After S seconds (60-120-240?) if the build queue is still there,
          * fire up another (N-1) slaves. Increase the number of the slaves gradually and not in bursts.
          *
@@ -311,7 +312,7 @@ public class MansionCloud extends AbstractCloudImpl {
          * This change not also reduces the load on the mansions, but on the masters as well.
          *
          */
-        long currentMillis = System.currentTimeMillis();
+        long currentEpoch = System.currentTimeMillis()/1000;
 
         int currentNumberOfSlaves = 0;
         for (MansionSlave n : Util.filter(Jenkins.getInstance().getNodes(), MansionSlave.class)) {
@@ -325,7 +326,7 @@ public class MansionCloud extends AbstractCloudImpl {
             if ( excessWorkload > INITIAL_SLAVES_TO_START ) {
                 excessWorkload = INITIAL_SLAVES_TO_START;
             }
-            lastLaunchedSlaveTimeMillis = currentMillis;
+            lastLaunchedSlaveTimeInEpoch = currentEpoch;
         /**
          * We already have a few slaves, but still need more slaves.
          * Only start them after M min and only N -1
@@ -333,8 +334,8 @@ public class MansionCloud extends AbstractCloudImpl {
         } else {
             if ( excessWorkload >= THRESHOLD_SLAVE_EXCESS_LIMIT ) {
                 // We want to fire up more slaves after M min from the previous launch
-                if ( TimeUnit.MILLISECONDS.toSeconds(currentMillis - lastLaunchedSlaveTimeMillis) > MIN_SEC_TO_WAIT_BETWEEN_PROVISION_CYCLES ) {
-                    lastLaunchedSlaveTimeMillis = currentMillis;
+                if (currentEpoch - lastLaunchedSlaveTimeInEpoch > MIN_SEC_TO_WAIT_BETWEEN_PROVISION_CYCLES) {
+                    lastLaunchedSlaveTimeInEpoch = currentEpoch;
                     excessWorkload = INITIAL_SLAVES_TO_START - 1;
                 } else {
                     /**
@@ -348,7 +349,7 @@ public class MansionCloud extends AbstractCloudImpl {
                  * Don't start slaves neither even if they're below the threshold excess limit,
                  * but slaves were fired up recently. Wait a few more cycles. The build queue should go away.
                  */
-                if ( TimeUnit.MILLISECONDS.toSeconds(currentMillis - lastLaunchedSlaveTimeMillis) <= MIN_SEC_TO_WAIT_BETWEEN_PROVISION_CYCLES) {
+                if (currentEpoch - lastLaunchedSlaveTimeInEpoch <= MIN_SEC_TO_WAIT_BETWEEN_PROVISION_CYCLES) {
                     excessWorkload = 0;
                 }
             }
@@ -535,4 +536,6 @@ public class MansionCloud extends AbstractCloudImpl {
      * we continuously have problems provisioning or launching slaves.
      */
     public static Long MAX_BACKOFF_SECONDS = Long.getLong(MansionCloud.class.getName() + ".maxBackOffSeconds", 600);  // 5 minutes
+
+    public long lastLaunchedSlaveTimeInEpoch = System.currentTimeMillis()/1000;
 }
