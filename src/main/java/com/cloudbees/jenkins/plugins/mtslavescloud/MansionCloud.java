@@ -56,7 +56,6 @@ import hudson.util.DescribableList;
 import hudson.util.HttpResponses;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
-import hudson.util.VersionNumber;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.HttpResponse;
@@ -86,9 +85,6 @@ import static java.util.logging.Level.WARNING;
  * @author Kohsuke Kawaguchi
  */
 public class MansionCloud extends AbstractCloudImpl {
-    private static final boolean NEED_OVERPROVISIONING_GUARD = 
-            Jenkins.getVersion() == null || Jenkins.getVersion().isOlderThan(new VersionNumber("1.607"));
-
     private final URL broker;
 
     /**
@@ -120,6 +116,14 @@ public class MansionCloud extends AbstractCloudImpl {
      * Is a call to the broker in progress?
      */
     private transient boolean provisioning = false;
+
+    /**
+     * Maximum number of slaves provisioning at the same state. Slaves are considered "in provisioning" until Jenkins
+     * successfully connects the remoting channel.
+     *
+     * The goal is to limit the load on mansion servers.
+     */
+    private static final int MAX_IN_PROVISIONING_SLAVE = 2;
 
     /**
      * Caches {@link TokenGenerator} by keying it off from {@link CloudBeesUser} that provides its credential.
@@ -245,30 +249,6 @@ public class MansionCloud extends AbstractCloudImpl {
             LOGGER.log(Level.FINE, "Back off in effect for {0}", st);
             return Collections.emptyList();
         }
-        if (NEED_OVERPROVISIONING_GUARD) {
-            // this check is only needed on Jenkins < 1.607
-            int overEager = 0;
-            for (MansionSlave n : Util.filter(Jenkins.getInstance().getNodes(), MansionSlave.class)) {
-                if (n.getTemplate() == st) {
-                    MansionComputer c = n.asComputer();
-                    if (c != null && c.isOffline() && c.isConnecting()) {
-                        overEager += n.getNumExecutors();
-                    }
-                }
-            }
-            if (overEager > excessWorkload) {
-                LOGGER.log(Level.FINE,
-                        "Holding off additional provisioning for {0} until the {1} pending connections complete",
-                        new Object[]{st, overEager});
-                return Collections.emptyList();
-            } else if (overEager > 0) {
-                LOGGER.log(Level.FINE,
-                        "Reducing effective workload for {0} from requested {1} to {2} due to {3} pending " 
-                                + "connections",
-                        new Object[]{st, excessWorkload, excessWorkload - overEager, overEager});
-                excessWorkload -= overEager;
-            }
-        }
 
         final HardwareSpec box = getBoxOf(st, label);
 
@@ -289,10 +269,13 @@ public class MansionCloud extends AbstractCloudImpl {
         }
         label = Jenkins.getInstance().getLabel(st.getLabel()+" "+box.size+compat);
 
-        
+        int allowedSlaveCreation = Math.min(MAX_IN_PROVISIONING_SLAVE,
+                MAX_IN_PROVISIONING_SLAVE - getInProgressSet().getInProvisioningCount());
+        int workloadToPlan = Math.min(excessWorkload, allowedSlaveCreation);
+
         final Queue<PlannedMansionSlave> queue = new ArrayBlockingQueue<PlannedMansionSlave>(excessWorkload);
         List<PlannedNode> r = new ArrayList<PlannedNode>();
-        for (int i = 0; i < excessWorkload; i++) {
+        for (int i = 0; i < workloadToPlan; i++) {
             PlannedMansionSlave plan = new PlannedMansionSlave(label, st);
             queue.add(plan);
             r.add(plan);

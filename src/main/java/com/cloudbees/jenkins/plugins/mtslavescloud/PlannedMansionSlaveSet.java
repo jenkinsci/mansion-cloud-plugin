@@ -47,6 +47,19 @@ public class PlannedMansionSlaveSet implements Iterable<PlannedMansionSlave> {
     }
 
     /**
+     * @return the number of mansion slaves that are currently provisioned
+     */
+    public int getInProvisioningCount() {
+        int result = 0;
+        for (PlannedMansionSlave s : data) {
+            if (s.getProblem() == null) {
+                result++;
+            }
+        }
+        return result;
+    }
+
+    /**
      * Trim the content to remove uninteresting entries.
      *
      * Called by {@link PlannedMansionSlave} when there's a status change.
