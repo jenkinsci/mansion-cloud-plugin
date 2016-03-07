@@ -129,25 +129,17 @@ public class MansionNodeProvisionerStrategy extends NodeProvisioner.Strategy {
             Collection<NodeProvisioner.PlannedNode> plannedNodes = mansionCloud.provision(label, currentDemand - availableCapacity);
             LOGGER.log(Level.FINE, "Planned {0} new nodes", plannedNodes.size());
             strategyState.recordPendingLaunches(plannedNodes);
+            availableCapacity += plannedNodes.size();
+            LOGGER.log(Level.FINE, "After provisioning, available capacity={0}, currentDemand={1}",
+                    new Object[]{availableCapacity, currentDemand});
         }
-        if (availableCapacity < currentDemand) {
-            return NodeProvisioner.StrategyDecision.CONSULT_REMAINING_STRATEGIES;
-        } else {
-            suggestReviewNow(label);
+        if (availableCapacity >= currentDemand) {
+            LOGGER.log(Level.FINE, "Provisioning completed");
             return NodeProvisioner.StrategyDecision.PROVISIONING_COMPLETED;
+        } else {
+            LOGGER.log(Level.FINE, "Provisioning not complete, consulting remaining strategies");
+            return NodeProvisioner.StrategyDecision.CONSULT_REMAINING_STRATEGIES;
         }
-    }
-
-    public static void suggestReviewNow(Label label) {
-        final Jenkins jenkins = Jenkins.getInstance();
-        if (jenkins == null) {
-            return;
-        }
-        final NodeProvisioner nodeProvisioner = (label == null)
-                ? jenkins.unlabeledNodeProvisioner
-                : label.nodeProvisioner;
-
-        nodeProvisioner.suggestReviewNow();
     }
 
     /**
