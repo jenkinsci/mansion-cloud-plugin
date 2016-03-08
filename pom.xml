@@ -48,26 +48,6 @@
   </scm>
 
   <dependencies>
-    <dependency><!-- work around JENKINS-13754 -->
-      <groupId>org.kohsuke.stapler</groupId>
-      <artifactId>stapler</artifactId>
-      <version>1.213</version>
-      <scope>provided</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.kohsuke.stapler</groupId>
-          <artifactId>json-lib</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.google.guava</groupId>
-          <artifactId>guava</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>commons-io</groupId>
-          <artifactId>commons-io</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>ssh-slaves</artifactId>
