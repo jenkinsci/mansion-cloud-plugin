@@ -39,9 +39,7 @@ public class SlaveTemplateTest {
                 matches("lxc-fedora17", "lxc-fedora17 || hi-speed"),
                 matches("lxc-fedora17", "hi-speed"),
                 matches("android", "android && standard"),
-                noMatch("android", "standard"),
-                matches("osx", "osx && standard"),
-                noMatch("osx", "standard"),
+                noMatch("android", "standard")
                 };
     }
 
