@@ -52,31 +52,5 @@
             ]
         },
         "persistentFileSystems" : ["/","/opt/android/android-sdk-linux"]
-    },
-    {
-        "id" : "osx",
-        "displayName" : "DEV@cloud Standard Mac OS X (Beta)",
-        "mansionType": "osx",
-        "nameMatchRequired": true,
-        "spec" : {
-            "configs" : [
-                {
-                    "type" : "fileSystem",
-                    "fileSystem" : "http://localhost:8080/zfs/osx",
-                    "path" : "/"
-                },
-                {
-                    "type" : "fileSystem",
-                    "fileSystem" : "http://localhost:8080/zfs/osx-opt",
-                    "path" : "/opt"
-                },
-                {
-                    "type" : "fileSystem",
-                    "fileSystem" : "http://localhost:8080/zfs/empty",
-                    "path" : "/scratch/jenkins"
-                }
-            ]
-        },
-        "persistentFileSystems" : ["/scratch/jenkins"]
     }
 ]}
